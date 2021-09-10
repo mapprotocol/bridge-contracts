@@ -13,33 +13,34 @@ interface MapERC20 is IERC20 {
 }
 
 interface SwapVerify{
-    function txVerify(uint256 srcChain, uint256 destChain, bytes32[] memory txProve) external returns(bool, bytes32[] memory);
+    function txVerify(address router, address coin, uint256 srcChain, uint256 destChain, bytes memory txProve) external view returns(bool, string memory);
 }
 
 contract MapRouter {
     event LogSwapIn(uint orderId, address indexed token, address indexed from, address indexed to, uint amount, uint fromChainID, uint toChainID);
     event LogSwapOut(uint orderId, address indexed token, address indexed from, address indexed to, uint amount, uint fromChainID, uint toChainID);
-    event LogSwapInFail(uint orderId, bytes32[] message,address indexed from, address indexed to, uint amount, uint fromChainID, uint toChainID);
+    event LogSwapInFail(uint orderId, string message,address indexed from, address indexed to, uint amount, uint fromChainID, uint toChainID);
     
-    address _mpc;
+    mapping(address => bool) mpc;
     uint256 orderId;
     uint256 chainID;
     SwapVerify swapverify;
     mapping(uint256 => uint256) chainOrder;
     
     constructor(address mpcAddress, address verfiy){
-        _mpc = mpcAddress;
+        mpc[mpcAddress] = true;
+        mpc[msg.sender] = true;
         swapverify = SwapVerify(verfiy);
     }
     
 
     modifier onlyMPC() {
-        require(msg.sender == mpc(), "FORBIDDEN");
+        require(checkMpc(msg.sender), "FORBIDDEN");
         _;
     }
 
-    function mpc()  view public returns(address){
-        return _mpc;
+    function checkMpc(address _sender)  view public returns(bool){
+        return mpc[_sender];
     }
 
 
@@ -48,8 +49,8 @@ contract MapRouter {
         emit LogSwapIn(id, token, address(0),to, amount, fromChainID, chainID);
     }
 
-    function swapIn(uint256 id, address token, address to, uint amount, uint fromChainID, bytes32[] memory data) external onlyMPC {
-        (bool check,bytes32[] memory message) = swapverify.txVerify(fromChainID,chainID,data);
+    function swapIn(uint256 id, address token, address to, uint amount, uint fromChainID, address sourceRouter, bytes memory data) external onlyMPC {
+        (bool check, string memory message) = swapverify.txVerify(sourceRouter,token,fromChainID,chainID,data);
         if (!check){
             emit LogSwapInFail(id, message, address(0),to, amount, fromChainID, chainID);
             return;
@@ -60,7 +61,8 @@ contract MapRouter {
 
     function _swapOut(address from, address token, address to, uint amount, uint toChainID) internal {
         orderId++;
-        MapERC20(token).burn(from, amount);
+        MapERC20(token).mint(from,amount);
+        MapERC20(token).burn(from,amount);
         emit LogSwapOut(orderId,token, from, to, amount, chainID, toChainID);
     }
 

@@ -1,5 +1,5 @@
-
-pragma solidity =0.5.12;
+//SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.0;
 
 contract USDT {
     // --- Auth ---
@@ -25,7 +25,7 @@ contract USDT {
     event Approval(address indexed src, address indexed guy, uint wad);
     event Transfer(address indexed src, address indexed dst, uint wad);
 
-    constructor() public {
+    constructor() {
         wards[msg.sender] = 1;
     }
 
@@ -44,7 +44,7 @@ contract USDT {
     
     function transferFrom(address src, address dst, uint wad)public returns (bool){
         require(balanceOf[src] >= wad, "insufficient-balance");
-        if (src != msg.sender && allowance[src][msg.sender] != uint(-1)) {
+        if (src != msg.sender && allowance[src][msg.sender] != type(uint).max) {
             require(allowance[src][msg.sender] >= wad, "insufficient-allowance");
             allowance[src][msg.sender] = sub(allowance[src][msg.sender], wad);
         }
@@ -62,7 +62,7 @@ contract USDT {
     
     function burn(address usr, uint wad) external {
         require(balanceOf[usr] >= wad, "insufficient-balance");
-        if (usr != msg.sender && allowance[usr][msg.sender] != uint(-1)) {
+        if (usr != msg.sender && allowance[usr][msg.sender] != type(uint).max) {
             require(allowance[usr][msg.sender] >= wad, "insufficient-allowance");
             allowance[usr][msg.sender] = sub(allowance[usr][msg.sender], wad);
         }

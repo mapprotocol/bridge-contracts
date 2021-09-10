@@ -4,12 +4,12 @@ pragma solidity ^0.8.0;
 
 contract CoinMapping{
     //Source chain to MAP chain
-    mapping(uint256 => mapping(address => address)) sourceMapCoin;
+    mapping(uint256 => mapping(address => address)) public sourceMapCoin;
     //MAP chain to target
-    mapping(uint256 => mapping(address => address)) mapSourceCoin;
+    mapping(uint256 => mapping(address => address)) public mapSourceCoin;
 
-    function reg(uint256 sourceChain,uint256 sourceCoin,address mapCoin) public{
-        sourceMapCoin[sourceChain] = sourceCoin[mapCoin];
-        mapSourceCoin[sourceChain] = mapCoin[sourceCoin];
+    function reg(uint256 sourceChain,address sourceCoin, address mapCoin) external{
+        sourceMapCoin[sourceChain][sourceCoin] = mapCoin;
+        mapSourceCoin[sourceChain][mapCoin] = sourceCoin;
     }
 }

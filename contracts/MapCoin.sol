@@ -1,139 +1,79 @@
+//SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-// SPDX-License-Identifier: UNLICENSED
-
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
-contract MapERC20 is IERC20{
-    using SafeERC20 for IERC20;
-    using SafeMath for uint256;
-
-    string public name;
-    string public symbol;
-    uint8  public decimals;
-    address public underlying;
-    uint256 private _totalSupply;
-
+contract MAP {
+    // --- Auth ---
+    mapping (address => uint) public wards;
+    function rely(address guy) external auth { wards[guy] = 1; }
+    function deny(address guy) external auth { wards[guy] = 0; }
     
-    mapping (address => uint256) public override balanceOf;
-    mapping (address => mapping (address => uint256)) public override allowance;
-
-
-    mapping(address => bool) public isAuth;
-    address[] public auther;
-    
-    
-    modifier onlyAuth() {
-        require(isAuth[msg.sender], "onlyAuth");
+    modifier auth {
+        require(wards[msg.sender] == 1, "not-authorized");
         _;
     }
-    
-    
-    event LogSwapin(bytes32 indexed txhash, address indexed account, uint amount);
-    event LogSwapout(address indexed account, address indexed bindaddr, uint amount);
-    
-    
-    constructor(string memory _name, string memory _symbol, uint8 _decimals, address _underlying) {
-        name = _name;
-        symbol = _symbol;
-        decimals = _decimals;
-        underlying = _underlying;
-        isAuth[msg.sender] = true;
-    }
-    
-    function setAuth(address auth) onlyAuth public{
-        isAuth[auth]=true;
-    }
-    
-    function removeAuth(address auth) onlyAuth public{
-        isAuth[auth]=false;
-    }
-    
-    function totalSupply() external view override returns (uint256) {
-        return _totalSupply;
-    }
-    
-    function approve(address spender, uint256 value) external override returns (bool) {
-        allowance[msg.sender][spender] = value;
-        emit Approval(msg.sender, spender, value);
 
-        return true;
+    // --- ERC20 Data ---
+    string  public constant name     = "MAP Protocol";
+    string  public constant symbol   = "MAP";
+    string  public constant version  = "1";
+    uint8   public constant decimals = 18;
+    uint256 public totalSupply;
+
+    mapping (address => uint)                      public balanceOf;
+    mapping (address => mapping (address => uint)) public allowance;
+
+    event Approval(address indexed src, address indexed guy, uint wad);
+    event Transfer(address indexed src, address indexed dst, uint wad);
+
+    constructor() {
+        wards[msg.sender] = 1;
+    }
+
+    // --- Math ---
+    function add(uint x, uint y) internal pure returns (uint z) {
+        require((z = x + y) >= x);
+    }
+    function sub(uint x, uint y) internal pure returns (uint z) {
+        require((z = x - y) <= x);
+    }
+
+    // --- Token ---
+    function transfer(address dst, uint wad) external returns (bool) {
+        return transferFrom(msg.sender, dst, wad);
     }
     
-    function transfer(address to, uint256 value) external override returns (bool) {
-        require(to != address(0) || to != address(this));
-        uint256 balance = balanceOf[msg.sender];
-        require(balance >= value, "AnyswapV3ERC20: transfer amount exceeds balance");
-
-        balanceOf[msg.sender] = balance - value;
-        balanceOf[to] += value;
-        emit Transfer(msg.sender, to, value);
-
-        return true;
-    }
-    
-    
-    function transferFrom(address from, address to, uint256 value) external override returns (bool) {
-        require(to != address(0) || to != address(this));
-        if (from != msg.sender) {
-            uint256 allowed = allowance[from][msg.sender];
-            if (allowed != type(uint256).max) {
-                require(allowed >= value, "request exceeds allowance");
-                uint256 reduced = allowed - value;
-                allowance[from][msg.sender] = reduced;
-                emit Approval(from, msg.sender, reduced);
-            }
+    function transferFrom(address src, address dst, uint wad)public returns (bool){
+        require(balanceOf[src] >= wad, "insufficient-balance");
+        if (src != msg.sender && allowance[src][msg.sender] != type(uint).max) {
+            require(allowance[src][msg.sender] >= wad, "insufficient-allowance");
+            allowance[src][msg.sender] = sub(allowance[src][msg.sender], wad);
         }
-
-        uint256 balance = balanceOf[from];
-        require(balance >= value, "transfer amount exceeds balance");
-
-        balanceOf[from] = balance - value;
-        balanceOf[to] += value;
-        emit Transfer(from, to, value);
-
+        balanceOf[src] = sub(balanceOf[src], wad);
+        balanceOf[dst] = add(balanceOf[dst], wad);
+        emit Transfer(src, dst, wad);
         return true;
     }
     
-    function _burn(address account, uint256 amount) internal {
-        require(account != address(0), "burn from the zero address");
-
-        balanceOf[account] -= amount;
-        _totalSupply -= amount;
-        emit Transfer(account, address(0), amount);
+    function mint(address usr, uint wad) external auth {
+        balanceOf[usr] = add(balanceOf[usr], wad);
+        totalSupply    = add(totalSupply, wad);
+        emit Transfer(address(0), usr, wad);
     }
     
-    function _mint(address account, uint256 amount) internal {
-        require(account != address(0), "mint to the zero address");
-
-        _totalSupply += amount;
-        balanceOf[account] += amount;
-        emit Transfer(address(0), account, amount);
+    function burn(address usr, uint wad) external {
+        require(balanceOf[usr] >= wad, "insufficient-balance");
+        if (usr != msg.sender && allowance[usr][msg.sender] != type(uint).max) {
+            require(allowance[usr][msg.sender] >= wad, "insufficient-allowance");
+            allowance[usr][msg.sender] = sub(allowance[usr][msg.sender], wad);
+        }
+        balanceOf[usr] = sub(balanceOf[usr], wad);
+        totalSupply    = sub(totalSupply, wad);
+        emit Transfer(usr, address(0), wad);
     }
     
-    function mint(address to, uint256 amount) external onlyAuth returns (bool) {
-        _mint(to, amount);
-        return true;
-    }
-
-    function burn(address from, uint256 amount) external onlyAuth returns (bool) {
-        require(from != address(0), "address(0x0)");
-        _burn(from, amount);
-        return true;
-    }
-
-    function Swapin(bytes32 txhash, address account, uint256 amount) public onlyAuth returns (bool) {
-        _mint(account, amount);
-        emit LogSwapin(txhash, account, amount);
-        return true;
-    }
-
-    function Swapout(uint256 amount, address bindaddr) public returns (bool) {
-        require(bindaddr != address(0), "address(0x0)");
-        _burn(msg.sender, amount);
-        emit LogSwapout(msg.sender, bindaddr, amount);
+    function approve(address usr, uint wad) external returns (bool) {
+        allowance[msg.sender][usr] = wad;
+        emit Approval(msg.sender, usr, wad);
         return true;
     }
 }
