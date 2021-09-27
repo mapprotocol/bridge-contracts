@@ -117,7 +117,7 @@ contract MapERC20 is IERC20{
     }
 
     function burn(address from, uint256 amount) external onlyAuth returns (bool) {
-        require(from != address(0), "address(0x0)");
+        require(from != address(0), "burn from the zero address");
         _burn(from, amount);
         return true;
     }
