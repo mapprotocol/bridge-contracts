@@ -52,6 +52,8 @@ contract Router {
         emit LogSwapIn(id, token, address(0), to, amount, fromChainID, chainID);
     }
 
+    // relayer submit tx to
+    // @id nonce
     function swapIn(uint256 id, address token, address to, uint amount, uint fromChainID, address sourceRouter, bytes memory data) external {
         (bool check, string memory message) = txVerify.Verify(sourceRouter, token, fromChainID, chainID, data);
         if (!check) {
@@ -71,6 +73,7 @@ contract Router {
         emit LogSwapOut(orderId, token, from, to, amount, chainID, toChainID);
     }
 
+    // msg.sender deposit @amount @token to cross-chain transfer to @to at chain @toChainID
     function swapOut(address token, address to, uint amount, uint toChainID) external {
         _swapOut(msg.sender, token, to, amount, toChainID);
     }
