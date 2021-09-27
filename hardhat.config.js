@@ -1,6 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require('dotenv').config()
-const { PRIVATE_KEY, ETH_INFURA_KEY} = process.env;
+const { PRIVATE_KEY, ETH_INFURA_KEY, INFURA_KEY} = process.env;
 
 
 // This is a sample Hardhat task. To learn how to create your own go to

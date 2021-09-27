@@ -21,7 +21,7 @@ async function main() {
     await mTokenRegister.deployed();
     console.log("TokenRegister address:", mTokenRegister.address);
 
-    await mTokenRegister.regToken(3,mToken.address,mMapERC20.address,"0x000000000000000000000000000000000000000");
+    await mTokenRegister.regToken(3,mToken.address,mMapERC20.address,"0x0000000000000000000000000000000000000000");
 
     const Router = await ethers.getContractFactory("Router");
     const mRouter = await Router.deploy("0x000000000000000000747275657374616b696E67",mTokenRegister.address);
