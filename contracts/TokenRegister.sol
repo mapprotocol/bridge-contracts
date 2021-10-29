@@ -1,6 +1,7 @@
 pragma solidity ^0.8.0;
 
 // SPDX-License-Identifier: UNLICENSED
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract TokenRegister {
     //Source chain to MAP chain
@@ -18,9 +19,15 @@ contract TokenRegister {
         sourceBinding[sourceChain][sourceMapToken] = sourceToken;
     }
 
+    function regTokenSource(
+        uint256 sourceChain, address sourceToken, address sourceMapToken
+    ) external {
+        sourceBinding[sourceChain][sourceMapToken] = sourceToken;
+    }
+
     function getTargetToken(
         uint256 sourceChain, address sourceToken, uint256 targetChain
-    ) external view returns (address mapToken){
+    ) external view  returns (address mapToken){
         return mapCorrespond[targetChain][sourceCorrespond[sourceChain][sourceToken]];
     }
 }

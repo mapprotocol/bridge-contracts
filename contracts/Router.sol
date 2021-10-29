@@ -13,18 +13,13 @@ contract Router {
     event LogSwapOut(uint orderId, address indexed token, address indexed from, address indexed to, uint amount, uint fromChainID, uint toChainID);
     event LogSwapInFail(uint orderId, string message, address indexed from, address indexed to, uint amount, uint fromChainID, uint toChainID);
 
-    mapping(address => bool) mpc;
-    uint256 public orderId;
-    uint256 public chainID;
-    mapping(uint256 => uint256) public chainOrder;
+    uint public orderId;
+    uint public chainID;
+    mapping(uint => mapping(uint => bool)) public chainOrder;
 
-
-    ITxVerify txVerify;
     IRegister register;
 
-    constructor(address verfiy, address registerAddress){
-        mpc[msg.sender] = true;
-        txVerify = ITxVerify(verfiy);
+    constructor(address registerAddress){
         register = IRegister(registerAddress);
 
         uint _chainId;
@@ -35,34 +30,40 @@ contract Router {
     }
 
 
-    modifier onlyMPC() {
-        require(checkMpc(msg.sender), "FORBIDDEN");
+    modifier checkOrderId(uint chain,uint oid){
+        require(chainOrder[chain][oid],"order is have");
         _;
     }
 
-    function checkMpc(address _sender) view public returns (bool){
-        return mpc[_sender];
+    function setChainOrder(uint chain,uint oid) public {
+        chainOrder[chain][oid] = true;
     }
 
-
-    function _swapIn(uint256 id, address token, address to, uint amount, uint fromChainID) internal {
+    function _swapIn(uint id, address token, address to, uint amount, uint fromChainID) internal {
         address mapToken = register.sourceCorrespond(fromChainID, token);
         require(mapToken != address(0), "token not register");
+        address sourceToken = register.mapCorrespond(fromChainID,mapToken);
+        require(sourceToken != address(0), "token not register");
         IMapERC20(mapToken).mint(to, amount);
+        IMapERC20(mapToken).burn(to, amount);
+        IERC20(sourceToken).transfer(to,amount);
         emit LogSwapIn(id, token, address(0), to, amount, fromChainID, chainID);
     }
 
-    // relayer submit tx to
-    // @id nonce
-    function swapIn(
-        uint256 id, address token, address to, uint amount, uint fromChainID, address sourceRouter, bytes memory data
-    ) external {
-        (bool check, string memory message) = txVerify.Verify(sourceRouter, token, fromChainID, chainID, data);
-        if (!check) {
-            emit LogSwapInFail(id, message, address(0), to, amount, fromChainID, chainID);
-            return;
+    function _swapBridge(uint id, address token, address to, uint amount, uint fromChainID, uint toChainID) internal {
+        address mapToken = register.sourceCorrespond(fromChainID, token);
+        require(mapToken != address(0), "token not register");
+        IMapERC20(mapToken).mint(to, amount);
+        IMapERC20(mapToken).burn(to, amount);
+        emit LogSwapOut(id, token, address(0), to, amount, chainID, toChainID);
+    }
+
+    function swapIn(uint id, address token, address to, uint amount, uint fromChainID,uint toChainID) external {
+        if(toChainID == chainID){
+            _swapIn(id,token,to,amount,fromChainID);
+        }else{
+            _swapBridge(id,token,to,amount,fromChainID,toChainID);
         }
-        _swapIn(id, token, to, amount, fromChainID);
     }
 
 
