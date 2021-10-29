@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract MapERC20NoAuth is  ERC20Burnable {
+contract MapERC20NoAuth is ERC20 {
     uint8 immutable private DECIMALS;
 
     constructor(address token, string memory _name, string memory _symbol) ERC20(_name, _symbol) {
@@ -20,6 +19,6 @@ contract MapERC20NoAuth is  ERC20Burnable {
     }
 
     function burn(address from, uint256 amount) external {
-        burnFrom(from, amount);
+        _burn(from, amount);
     }
 }
