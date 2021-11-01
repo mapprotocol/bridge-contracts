@@ -4,6 +4,16 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract TokenRegister {
+    uint public chainID;
+    constructor(){
+        uint _chainId;
+        assembly {
+            _chainId := chainid()
+        }
+        chainID = _chainId;
+    }
+
+
     //Source chain to MAP chain
     mapping(uint256 => mapping(address => address)) public sourceCorrespond;
     //MAP chain to target
@@ -16,13 +26,13 @@ contract TokenRegister {
     ) external {
         sourceCorrespond[sourceChain][sourceMapToken] = mapToken;
         mapCorrespond[sourceChain][mapToken] = sourceMapToken;
-        sourceBinding[sourceChain][sourceMapToken] = sourceToken;
+        sourceBinding[chainID][sourceMapToken] = sourceToken;
     }
 
     function regTokenSource(
         uint256 sourceChain, address sourceToken, address sourceMapToken
     ) external {
-        sourceBinding[sourceChain][sourceMapToken] = sourceToken;
+        sourceBinding[chainID][sourceMapToken] = sourceToken;
     }
 
     function getTargetToken(
