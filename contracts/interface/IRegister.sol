@@ -9,6 +9,8 @@ interface IRegister {
 
     function sourceBinding(uint256 sourceChainID, address sourceMapToken) external view returns (address mapToken);
 
+    function bindingSource(uint256 sourceChainID, address mapToken) external view returns (address sourceToken);
+
     function getTargetToken(uint256 sourceChain, address sourceToken, uint256 targetChain) external view returns (address mapToken);
 
     function regToken(uint256 sourceChain, address sourceMapToken, address mapToken) external;

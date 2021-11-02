@@ -47,7 +47,7 @@ contract Router {
     function _swapIn(bytes32 hash, address token, address to, uint amount, uint fromChainID) internal {
         address mapToken = register.sourceCorrespond(fromChainID, token);
         require(mapToken != address(0), "token not register");
-        address sourceToken = register.sourceBinding(chainID,mapToken);
+        address sourceToken = register.bindingSource(chainID,mapToken);
         require(sourceToken != address(0), "token not register");
         IMapERC20(mapToken).mint(to, amount);
         IMapERC20(mapToken).burn(to, amount);

@@ -19,6 +19,8 @@ contract TokenRegister {
     mapping(uint256 => mapping(address => address)) public mapCorrespond;
     //Source token binding
     mapping(uint256 => mapping(address => address)) public sourceBinding;
+    //Source token binding
+    mapping(uint256 => mapping(address => address)) public bindingSource;
 
     function regToken(
         uint256 sourceChain, address sourceMapToken, address mapToken
@@ -29,6 +31,7 @@ contract TokenRegister {
 
     function regTokenSource(address sourceToken, address sourceMapToken) external {
         sourceBinding[chainID][sourceMapToken] = sourceToken;
+        bindingSource[chainID][sourceToken] = sourceMapToken;
     }
 
     function getTargetToken(
