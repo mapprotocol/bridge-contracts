@@ -13,7 +13,6 @@ contract TokenRegister {
         chainID = _chainId;
     }
 
-
     //Source chain to MAP chain
     mapping(uint256 => mapping(address => address)) public sourceCorrespond;
     //MAP chain to target
@@ -22,16 +21,13 @@ contract TokenRegister {
     mapping(uint256 => mapping(address => address)) public sourceBinding;
 
     function regToken(
-        uint256 sourceChain, address sourceToken, address sourceMapToken, address mapToken
+        uint256 sourceChain, address sourceMapToken, address mapToken
     ) external {
         sourceCorrespond[sourceChain][sourceMapToken] = mapToken;
         mapCorrespond[sourceChain][mapToken] = sourceMapToken;
-        sourceBinding[chainID][sourceMapToken] = sourceToken;
     }
 
-    function regTokenSource(
-        uint256 sourceChain, address sourceToken, address sourceMapToken
-    ) external {
+    function regTokenSource(address sourceToken, address sourceMapToken) external {
         sourceBinding[chainID][sourceMapToken] = sourceToken;
     }
 
