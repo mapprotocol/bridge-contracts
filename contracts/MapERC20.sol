@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract MapERC20 is  ERC20Burnable {
+contract MapERC20NoAuth is ERC20 {
     uint8 immutable private DECIMALS;
 
     address public router;
@@ -14,7 +13,19 @@ contract MapERC20 is  ERC20Burnable {
         _;
     }
 
-    constructor(address token, string memory _name, string memory _symbol, address _router) ERC20(_name, _symbol) {
+    function getMapString(string memory str) public pure returns(string memory mapStr){
+        return string(abi.encodePacked("MAP",str));
+    }
+
+    function getErc20Name(address token) public view returns(string memory){
+        return getMapString(IERC20Metadata(token).name());
+    }
+
+    function getErc20Symbol(address token) public view returns(string memory){
+        return getMapString(IERC20Metadata(token).symbol());
+    }
+
+    constructor(address token, address _router) ERC20(getErc20Name(token),getErc20Symbol(token)) {
         DECIMALS = IERC20Metadata(token).decimals();
         router = _router;
     }
@@ -27,7 +38,7 @@ contract MapERC20 is  ERC20Burnable {
         _mint(to, amount);
     }
 
-    function burn(address from, uint256 amount) external onlyRouter {
-        burnFrom(from, amount);
+    function burn(address from, uint256 amount) external onlyRouter{
+        _burn(from, amount);
     }
 }
