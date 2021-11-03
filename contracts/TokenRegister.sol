@@ -22,6 +22,7 @@ contract TokenRegister {
     //Source token binding
     mapping(uint256 => mapping(address => address)) public bindingSource;
 
+
     function regToken(
         uint256 sourceChain, address sourceMapToken, address mapToken
     ) external {
