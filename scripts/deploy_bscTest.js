@@ -6,14 +6,14 @@ async function main() {
     );
     console.log("Account balance:", (await deployer.getBalance()).toString());
 
-    const Token = await ethers.getContractFactory("TokenTest");
+    const Token = await ethers.getContractFactory("Token");
     const mToken = await Token.deploy();
     await mToken.deployed();
     console.log("Token address:", mToken.address);
 
 
-    const MapERC20 = await ethers.getContractFactory("MapERC20NoAuth");
-    const mMapERC20 = await MapERC20.deploy(mToken.address,"Map Test Coin", "Map TC");
+    const MapERC20 = await ethers.getContractFactory("MapERC20");
+    const mMapERC20 = await MapERC20.deploy(mToken.address);
     await mMapERC20.deployed();
     console.log("MapERC20 address:", mMapERC20.address);
 

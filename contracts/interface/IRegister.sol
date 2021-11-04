@@ -16,4 +16,6 @@ interface IRegister {
     function regToken(uint256 sourceChain, address sourceMapToken, address mapToken) external;
 
     function regTokenSource(address sourceToken, address sourceMapToken) external;
+
+    function getToChainToken(address sourceToken,uint toChainID) external view returns(address);
 }

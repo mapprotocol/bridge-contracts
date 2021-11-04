@@ -37,7 +37,12 @@ contract TokenRegister {
 
     function getTargetToken(
         uint256 sourceChain, address sourceToken, uint256 targetChain
-    ) external view  returns (address mapToken){
+    ) public view  returns (address mapToken){
         return mapCorrespond[targetChain][sourceCorrespond[sourceChain][sourceToken]];
+    }
+
+    function getToChainToken(address sourceToken,uint toChainID) external view returns(address){
+        address sourceMapToken = bindingSource[chainID][sourceToken];
+        return getTargetToken(chainID,sourceMapToken,toChainID);
     }
 }

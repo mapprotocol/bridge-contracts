@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
 
 contract MapERC20 is ERC20 {
     uint8 immutable private DECIMALS;
@@ -13,15 +15,15 @@ contract MapERC20 is ERC20 {
         _;
     }
 
-    function getMapString(string memory str) public pure returns(string memory mapStr){
+    function getMapString(string memory str) private pure returns(string memory mapStr){
         return string(abi.encodePacked("MAP",str));
     }
 
-    function getErc20Name(address token) public view returns(string memory){
+    function getErc20Name(address token) private view returns(string memory){
         return getMapString(IERC20Metadata(token).name());
     }
 
-    function getErc20Symbol(address token) public view returns(string memory){
+    function getErc20Symbol(address token) private view returns(string memory){
         return getMapString(IERC20Metadata(token).symbol());
     }
 

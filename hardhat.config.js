@@ -1,4 +1,5 @@
 require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-ethers");
 require('dotenv').config()
 const { PRIVATE_KEY, ETH_INFURA_KEY, INFURA_KEY} = process.env;
 
