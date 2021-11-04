@@ -52,7 +52,7 @@ contract Router is ReentrancyGuard{
     function _swapIn(bytes32 hash, address token, address to, uint amount, uint fromChainID) internal{
         address mapToken = register.sourceCorrespond(fromChainID, token);
         require(mapToken != address(0), "token not register");
-        address sourceToken = register.bindingSource(chainID,mapToken);
+        address sourceToken = register.sourceBinding()(chainID,mapToken);
         require(sourceToken != address(0), "token not register");
         IMapERC20(mapToken).mint(to, amount);
         IMapERC20(mapToken).burn(to, amount);
@@ -81,7 +81,7 @@ contract Router is ReentrancyGuard{
     function _swapOut(address from, address token, address to, uint amount, uint toChainID) internal checkToChainToken(token,toChainID){
         orderId++;
         bytes32 hash = getTransactionID(orderId,from,token,to,amount,toChainID);
-        address sToken = register.sourceBinding(chainID, token);
+        address sToken = register.bindingSource(chainID, token);
         IMapERC20(sToken).transferFrom(from, address(this), amount);
         IMapERC20(token).mint(from, amount);
         IMapERC20(token).burn(from, amount);
