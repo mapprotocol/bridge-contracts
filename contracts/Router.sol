@@ -81,11 +81,11 @@ contract Router is ReentrancyGuard{
     function _swapOut(address from, address token, address to, uint amount, uint toChainID) internal checkToChainToken(token,toChainID){
         orderId++;
         bytes32 hash = getTransactionID(orderId,from,token,to,amount,toChainID);
-        address sToken = register.bindingSource(chainID, token);
-        IMapERC20(sToken).transferFrom(from, address(this), amount);
-        IMapERC20(token).mint(from, amount);
-        IMapERC20(token).burn(from, amount);
-        emit LogSwapOut(hash, token, from, to, amount, chainID, toChainID);
+        address mapToken = register.bindingSource(chainID, token);
+        IMapERC20(token).transferFrom(from, address(this), amount);
+        IMapERC20(mapToken).mint(from, amount);
+        IMapERC20(mapToken).burn(from, amount);
+        emit LogSwapOut(hash, mapToken, from, to, amount, chainID, toChainID);
     }
 
     // msg.sender deposit @amount @token to cross-chain transfer to @to at chain @toChainID
