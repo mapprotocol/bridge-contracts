@@ -9,6 +9,7 @@ contract MapERC20 is ERC20 {
     uint8 immutable private DECIMALS;
 
     address public router;
+    bool public isMap = true;
 
     modifier onlyRouter() {
         require(msg.sender == router, "forbidden");

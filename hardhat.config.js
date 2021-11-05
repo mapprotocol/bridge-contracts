@@ -1,7 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 require('dotenv').config()
-const { PRIVATE_KEY, ETH_INFURA_KEY, INFURA_KEY} = process.env;
+const { PRIVATE_KEY, ETH_INFURA_KEY, INFURA_KEY, HECO_SCAN_KEY} = process.env;
 
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -23,11 +23,6 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 module.exports = {
   solidity: "0.8.0",
   networks: {
-    HecoTest: {
-      url: `https://http-testnet.hecochain.com`,
-      chainId : 256,
-      accounts: [PRIVATE_KEY]
-    },
     MaticTest: {
       url: `https://rpc-mumbai.maticvigil.com/`,
       chainId : 80001,
@@ -41,6 +36,11 @@ module.exports = {
     Heco: {
       url: `https://http-mainnet-node.huobichain.com`,
       chainId : 128,
+      accounts: [PRIVATE_KEY]
+    },
+    HecoTest: {
+      url: `https://http-testnet.hecochain.com`,
+      chainId : 256,
       accounts: [PRIVATE_KEY]
     },
     Eth: {
@@ -57,6 +57,19 @@ module.exports = {
       url: `http://159.138.90.210:7445`,
       chainId : 211,
       accounts: [PRIVATE_KEY]
+    },
+    Bsc: {
+      url: `https://bsc-dataseed1.binance.org/`,
+      chainId : 56,
+      accounts: [PRIVATE_KEY]
+    },
+    BscTest: {
+      url: `https://data-seed-prebsc-1-s1.binance.org:8545/`,
+      chainId : 97,
+      accounts: [PRIVATE_KEY]
     }
+  },
+  etherscan:{
+    apiKey: [HECO_SCAN_KEY]
   }
 };

@@ -7,33 +7,33 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./interface/ITxVerify.sol";
 import "./interface/IMapERC20.sol";
-import "./interface/IRegister.sol";
+import "./TokenRegister.sol";
 
 contract Router is ReentrancyGuard{
+
     event LogSwapIn(bytes32 hash, address indexed token, address indexed from, address indexed to, uint amount, uint fromChainID, uint toChainID);
     event LogSwapOut(bytes32 hash, address indexed token, address indexed from, address indexed to, uint amount, uint fromChainID, uint toChainID);
     event LogSwapInFail(bytes32 hash, string message, address indexed from, address indexed to, uint amount, uint fromChainID, uint toChainID);
 
-    uint public orderId;
+    uint public nonce;
     uint public chainID;
 
     mapping(bytes32 => bool) hashHandle;
 
-    IRegister register;
+    TokenRegister tokenRegister;
 
-    constructor(address registerAddress){
-        register = IRegister(registerAddress);
+    constructor(TokenRegister _tokenRegister){
+        tokenRegister = _tokenRegister;
         uint _chainId;
-        assembly {
-            _chainId := chainid()
-        }
+        assembly {_chainId := chainid()}
         chainID = _chainId;
     }
 
-    modifier checkToChainToken(address source, uint toChainId){
-        require(register.getToChainToken(source,toChainId) != address(0),"Target chain does not support");
+    modifier checkToken(uint fromChain,address source, uint toChain){
+        require(address(0) != tokenRegister.getToToken(fromChain,source,toChain), "target token is empty");
         _;
     }
+
 
     modifier checkOrderHash(bytes32 hash){
         require(!hashHandle[hash],"order hash is have");
@@ -44,48 +44,57 @@ contract Router is ReentrancyGuard{
         hashHandle[hash] = true;
     }
 
-    function getTransactionID(uint nonce,address from, address token, address to, uint amount, uint toChainID) public view returns(bytes32){
+    function getNextTransactionID(address from, address token, address to, uint amount, uint toChainID) public returns(bytes32){
+        nonce ++;
         return keccak256(abi.encodePacked(nonce,from,token,to,amount,chainID,toChainID));
     }
 
 
-    function _swapIn(bytes32 hash, address token, address to, uint amount, uint fromChainID) internal{
-        address mapToken = register.sourceCorrespond(fromChainID, token);
-        require(mapToken != address(0), "token not register");
-        address sourceToken = register.sourceBinding(chainID,mapToken);
-        require(sourceToken != address(0), "token not register");
-        IMapERC20(mapToken).mint(to, amount);
-        IMapERC20(mapToken).burn(to, amount);
-        IERC20(sourceToken).transfer(to,amount);
-        emit LogSwapIn(hash, token, address(0), to, amount, fromChainID, chainID);
+    function _swapIn(bytes32 hash, address token, address from,address to, uint amount, uint fromChainID) internal{
+        _withdraw(token,amount,to);
+        emit LogSwapIn(hash, token, from, to, amount, fromChainID, chainID);
     }
 
-    function _swapBridge(bytes32 hash, address token, address to, uint amount, uint fromChainID, uint toChainID) internal {
-        address mapToken = register.sourceCorrespond(fromChainID, token);
-        require(mapToken != address(0), "token not register");
-        IMapERC20(mapToken).mint(to, amount);
-        IMapERC20(mapToken).burn(to, amount);
-        emit LogSwapOut(hash, token, address(0), to, amount, chainID, toChainID);
+    function _swapBridge(bytes32 hash, address token, address from,address to, uint amount, uint toChainID) internal {
+        emit LogSwapOut(hash, token, from, to, amount, chainID, toChainID);
     }
 
-    function swapIn(bytes32 hash, address token, address to, uint amount, uint fromChainID,uint toChainID) external checkOrderHash(hash) nonReentrant{
-        if(toChainID == chainID){
-            _swapIn(hash,token,to,amount,fromChainID);
+
+    function _withdraw(address _token,uint amount, address to) internal{
+        IMapERC20 token = IMapERC20(_token);
+        if (token.isMap()){
+            token.mint(to,amount);
         }else{
-            _swapBridge(hash,token,to,amount,fromChainID,toChainID);
+            token.transfer(to,amount);
+        }
+    }
+
+    function swapIn(bytes32 hash, address token, address from, address to, uint amount, uint fromChainID,uint toChainID)
+    external checkOrderHash(hash) nonReentrant(){
+        if(toChainID == chainID){
+            _swapIn(hash,token,from,to,amount,fromChainID);
+        }else{
+            _swapBridge(hash,token,from,to,amount,toChainID);
         }
         setOrderHash(hash);
     }
 
 
-    function _swapOut(address from, address token, address to, uint amount, uint toChainID) internal checkToChainToken(token,toChainID){
-        orderId++;
-        bytes32 hash = getTransactionID(orderId,from,token,to,amount,toChainID);
-        address mapToken = register.bindingSource(chainID, token);
-        IMapERC20(token).transferFrom(from, address(this), amount);
-        IMapERC20(mapToken).mint(from, amount);
-        IMapERC20(mapToken).burn(from, amount);
-        emit LogSwapOut(hash, mapToken, from, to, amount, chainID, toChainID);
+    function _swapOut(address from, address token, address to, uint amount, uint toChainID) internal{
+        address toToken = tokenRegister.getToToken(chainID,token,toChainID);
+        require(toToken != address(0),"Other token is not Regisger");
+        bytes32 hash = getNextTransactionID(from,token,to,amount,toChainID);
+        _lock(token,amount);
+        emit LogSwapOut(hash, toToken, from, to, amount, chainID, toChainID);
+    }
+
+    function _lock(address _token,uint amount) public {
+        IMapERC20 token = IMapERC20(_token);
+        if (token.isMap()){
+            token.burn(msg.sender,amount);
+        }else{
+            token.transferFrom(msg.sender,address(this),amount);
+        }
     }
 
     // msg.sender deposit @amount @token to cross-chain transfer to @to at chain @toChainID
