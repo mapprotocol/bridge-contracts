@@ -5,11 +5,13 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interface/ITxVerify.sol";
 import "./interface/IMapERC20.sol";
 import "./TokenRegister.sol";
+import "./interface/IVote.sol";
 
-contract Router is ReentrancyGuard{
+contract Router is ReentrancyGuard,Ownable{
 
     event LogSwapIn(bytes32 hash, address indexed token, address indexed from, address indexed to, uint amount, uint fromChainID, uint toChainID);
     event LogSwapOut(bytes32 hash, address indexed token, address indexed from, address indexed to, uint amount, uint fromChainID, uint toChainID);
@@ -21,6 +23,8 @@ contract Router is ReentrancyGuard{
     mapping(bytes32 => bool) hashHandle;
 
     TokenRegister tokenRegister;
+    ITxVerify verify;
+    IVote vote;
 
     constructor(TokenRegister _tokenRegister){
         tokenRegister = _tokenRegister;
@@ -38,6 +42,14 @@ contract Router is ReentrancyGuard{
     modifier checkOrderHash(bytes32 hash){
         require(!hashHandle[hash],"order hash is have");
         _;
+    }
+
+    function setVerify(address _verify) public onlyOwner{
+        verify = ITxVerify(_verify);
+    }
+
+    function setVote(address _vote) public  onlyOwner{
+        vote = IVote(_vote);
     }
 
     function setOrderHash(bytes32 hash) public {
@@ -69,8 +81,10 @@ contract Router is ReentrancyGuard{
         }
     }
 
-    function swapIn(bytes32 hash, address token, address from, address to, uint amount, uint fromChainID,uint toChainID)
+    function swapIn(bytes32 hash, address token, address from, address to, uint amount, uint fromChainID,uint toChainID,bytes memory txProve)
     external checkOrderHash(hash) nonReentrant(){
+        if(txProve.length >10){
+            }
         if(toChainID == chainID){
             _swapIn(hash,token,from,to,amount,fromChainID);
         }else{
