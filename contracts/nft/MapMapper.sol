@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >0.8.0;
+pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
 contract MAPERC721 is ERC721Enumerable, Ownable {
-    string private basURI;
-
+    string public baseURI;
 
     mapping (uint256 => string) private _tokenURIs;
 
@@ -15,14 +14,13 @@ contract MAPERC721 is ERC721Enumerable, Ownable {
         _setBaseURI(baseURI_);
     }
 
-
     function _baseURI() internal view override returns (string memory) {
-        return basURI;
+        return baseURI;
     }
 
 
     function _setBaseURI(string memory baseURI_) internal {
-        basURI = baseURI_;
+        baseURI = baseURI_;
     }
 
     function mint(address to, uint256 tokenId) external onlyOwner {
