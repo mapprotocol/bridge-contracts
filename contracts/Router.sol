@@ -85,7 +85,7 @@ contract Router is ReentrancyGuard, Ownable {
         address router, bytes memory txProve)
     external checkOrderHash(hash) nonReentrant() {
         if (txProve.length > 10) {
-            (bool succ,string memory message) = verify.Verify(router, token, fromChainID, toChainID, txProve);
+            (bool succ,string memory message) = verify.txVerify(router, token, fromChainID, toChainID, txProve);
             require(succ, "very fail");
             emit LogSwapInFail(hash,message,from,to,amount,fromChainID,toChainID);
         } else {

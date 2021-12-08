@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract Token is ERC20 {
+contract Token2 is ERC20 {
     bool public isMap = true;
     constructor(address to) ERC20("Test Coin", "TC") {
         _mint(to,100000000000000000000000000);

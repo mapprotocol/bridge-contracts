@@ -54,8 +54,8 @@ module.exports = {
       accounts: [PRIVATE_KEY]
     },
     Map: {
-      url: `http://159.138.90.210:7445`,
-      chainId : 211,
+      url: `http://20.205.187.105:7445`,
+      chainId : 177,
       accounts: [PRIVATE_KEY]
     },
     Bsc: {
@@ -66,6 +66,16 @@ module.exports = {
     BscTest: {
       url: `https://data-seed-prebsc-1-s1.binance.org:8545/`,
       chainId : 97,
+      accounts: [PRIVATE_KEY]
+    },
+    Abey: {
+      url: `http://54.169.112.1:8545`,
+      chainId : 179,
+      accounts: [PRIVATE_KEY]
+    },
+    True: {
+      url: `https://rpc.truescan.network/`,
+      chainId : 19330,
       accounts: [PRIVATE_KEY]
     }
   },
