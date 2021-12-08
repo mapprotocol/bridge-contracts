@@ -39,7 +39,7 @@ contract TokenRegister {
             return getMapToken(token);
         }
         if(fromChian == mapChainID){
-            return getOtherToken(mapChainID,toChain);
+            return getOtherToken(mapChainID,token);
         }
         return getBirdgeToken(fromChian,token,toChain);
     }
