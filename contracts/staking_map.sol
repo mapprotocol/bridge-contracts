@@ -87,8 +87,8 @@ contract Staking is Managers {
     }
 
     function staking(uint256 _amount, uint256 _dayCount) external payable{
-        require(_dayCount == 1 ||
-        _dayCount == 30 ||
+        require(
+            _dayCount == 30 ||
             _dayCount == 60, "day error");
 
         require(msg.value > subsidySmall,"balance is to low");
