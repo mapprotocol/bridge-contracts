@@ -132,7 +132,6 @@ contract Staking is Managers {
         payable(msg.sender).transfer(award);
 
         if(!receiveSubsidy[msg.sender]){
-            uint sendSubsidy = subsidy;
             if(u.amount >= subsidy){
                 payable(msg.sender).transfer(subsidy);
             }else{
