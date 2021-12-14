@@ -15,25 +15,24 @@ contract Managers {
     }
 
     modifier onlyMaster(){
-        require(msg.sender == master,"only master");
+        require(msg.sender == master, "only master");
         _;
     }
 
     modifier onlyManager(){
-        require(manager[msg.sender],"only manager");
+        require(manager[msg.sender], "only manager");
         _;
     }
 
-
-    function addManager(address _address) public onlyMaster{
+    function addManager(address _address) public onlyMaster {
         manager[_address] = true;
     }
 
-    function removeManager(address _address) public onlyMaster{
+    function removeManager(address _address) public onlyMaster {
         manager[_address] = false;
     }
 
-    function changeMaster(address _address) public onlyMaster{
+    function changeMaster(address _address) public onlyMaster {
         master = _address;
     }
 }
@@ -41,11 +40,12 @@ contract Managers {
 contract Staking is Managers {
     using SafeMath for uint256;
 
-    uint256 public addressCount =0;
+    uint256 public addressCount = 0;
     uint256 public stakingAmount;
     uint256 public rate = 3600;
     uint256 public subsidy = 500 * 1e18;
     uint256 public subsidySmall = 10 * 1e18;
+    uint256 public stakingSmall = 9 * 1e18;
     dayHourSign[24] public dayHourSigns;
 
     mapping(address => userInfo) public userInfos;
@@ -54,7 +54,7 @@ contract Staking is Managers {
     //address bind
     mapping(address => address) public addressBind;
 
-    mapping(address => bool) public receiveSubsidy;
+    bool isRunning = true;
 
     //data userinfo
     struct userInfo {
@@ -64,10 +64,11 @@ contract Staking is Managers {
         uint256 daySign;
         uint256 amount;
         uint256 [] signTm;
+        uint256 subsidy;
+        bool subsidySend;
     }
 
-
-    struct dayHourSign{
+    struct dayHourSign {
         uint256 times;
         uint256 day;
     }
@@ -83,20 +84,27 @@ contract Staking is Managers {
         _;
     }
 
-    receive() payable external{
+    modifier onlyRunning(){
+        require(isRunning,"staking is stop");
+        _;
     }
 
-    function staking(uint256 _amount, uint256 _dayCount) external payable{
+    receive() payable external {
+    }
+
+    function staking(uint256 _amount, uint256 _dayCount) external payable onlyRunning {
         require(
             _dayCount == 30 ||
-            _dayCount == 60, "day error");
+            _dayCount == 60 ||
+            _dayCount == 90, "day error");
 
-        require(msg.value > subsidySmall,"balance is to low");
+        require(msg.value > stakingAmount, "balance is too low");
+
         _amount = msg.value;
 
         userInfo storage u = userInfos[msg.sender];
 
-        if (u.amount == 0 && u.stakingStatus ==0){
+        if (u.amount == 0 && u.stakingStatus == 0) {
             addressCount++;
         }
 
@@ -109,50 +117,67 @@ contract Staking is Managers {
         u.dayCount = _dayCount;
         u.daySign = 0;
         u.stakingStatus = 0;
-        delete(u.signTm);
+
+        if (!u.subsidySend) {
+            if (u.amount >= subsidy) {
+                u.subsidy = subsidy;
+            } else {
+                u.subsidy = subsidySmall;
+            }
+        }
+
+        delete (u.signTm);
         emit stakingE(msg.sender, _amount, _dayCount);
     }
 
-    function getAward(address _sender) public view returns(uint){
+    function getAward(address _sender) public view returns (uint){
         userInfo memory u = userInfos[_sender];
-        if (u.daySign > 0){
+        if (u.daySign > 0) {
             return u.amount.mul(u.daySign).mul(rate).div(365).div(10000);
         }
         return 0;
     }
 
 
-    function withdraw() external checkEnd(msg.sender) {
+    function withdraw() external checkEnd(msg.sender) onlyRunning{
         userInfo storage u = userInfos[msg.sender];
 
-        require(u.stakingStatus == 1,"only withdrawing");
+        require(u.stakingStatus == 1, "only withdrawing");
         uint256 award = getAward(msg.sender);
 
         payable(msg.sender).transfer(u.amount);
         payable(msg.sender).transfer(award);
 
-        if(!receiveSubsidy[msg.sender]){
-            if(u.amount >= subsidy){
-                payable(msg.sender).transfer(subsidy);
-            }else{
-                payable(msg.sender).transfer(subsidySmall);
-            }
-            receiveSubsidy[msg.sender] = true;
+        if (!u.subsidySend) {
+            u.subsidySend = true;
+            u.subsidy = 0;
+            payable(msg.sender).transfer(u.subsidy);
         }
-
         stakingAmount = stakingAmount.sub(u.amount);
 
-        u.amount =0;
+        u.amount = 0;
         u.stakingStatus = 2;
-        u.dayCount =0;
+        u.dayCount = 0;
         u.daySign = 0;
-        delete(u.signTm);
+        delete (u.signTm);
 
         emit withdrawE(msg.sender, u.amount);
     }
 
     function setSubsidy(uint256 value) external onlyManager {
         subsidy = value.mul(1e18);
+    }
+
+    function setSubsidySmall(uint256 value) external onlyManager {
+        subsidySmall = value.mul(1e18);
+    }
+
+    function setStakingSmall(uint256 value) external onlyManager {
+        stakingSmall = value.mul(1e18);
+    }
+
+    function setRunning(bool run) external onlyManager {
+        isRunning = run;
     }
 
     function bindingWorker(address worker) external {
@@ -163,30 +188,30 @@ contract Staking is Managers {
 
     function getSender(address _worker) public view returns (address){
         address sender = bindAddress[_worker];
-        require(sender != address(0),"Must binding worker");
+        require(sender != address(0), "Must binding worker");
         return sender;
     }
 
-    function getTmDayHour(uint256 tm) public pure returns(uint256 day,uint256 hour){
-        if (tm == 0){
-            return(0,0);
+    function getTmDayHour(uint256 tm) public pure returns (uint256 day, uint256 hour){
+        if (tm == 0) {
+            return (0, 0);
         }
-        day = tm.div(3600*24);
-        hour = tm.sub(day.mul(3600*24)).div(3600);
+        day = tm.div(3600 * 24);
+        hour = tm.sub(day.mul(3600 * 24)).div(3600);
     }
 
-    function setLastSign(address user,uint256 tm) external onlyManager {
+    function setLastSign(address user, uint256 tm) external onlyManager {
         userInfo storage u = userInfos[user];
         u.signTm.push(tm);
     }
 
-    function getLastSign(address _sender) public view returns(uint256){
+    function getLastSign(address _sender) public view returns (uint256){
         userInfo memory u = userInfos[_sender];
-        if(u.signTm.length == 0) return 0;
-        return u.signTm[u.signTm.length-1];
+        if (u.signTm.length == 0) return 0;
+        return u.signTm[u.signTm.length - 1];
     }
 
-    function sign() external{
+    function sign() external onlyRunning{
         address sender = getSender(msg.sender);
         userInfo storage u = userInfos[sender];
 
@@ -196,30 +221,30 @@ contract Staking is Managers {
         (uint256 lastDay,) = getTmDayHour(last);
         (uint256 day,uint256 hour) = getTmDayHour(block.timestamp);
 
-        require(day > lastDay,"today is sign");
+        require(day > lastDay, "today is sign");
 
         dayHourSign storage ds = dayHourSigns[hour];
-        if (day != ds.day){
+        if (day != ds.day) {
             ds.times = 1;
-        }else{
+        } else {
             ds.times = ds.times.add(1);
         }
         ds.day = day;
         u.signTm.push(block.timestamp);
         u.daySign = u.daySign.add(1);
 
-        if(u.daySign >= u.dayCount){
+        if (u.daySign >= u.dayCount) {
             u.stakingStatus = 1;
         }
     }
 
-    function get24HourSign() external view returns(uint){
+    function get24HourSign() external view returns (uint){
         uint256 count = 0;
         (uint256 day,uint256 hour) = getTmDayHour(block.timestamp);
 
-        for (uint i = 0;i<24 ;i++){
+        for (uint i = 0; i < 24; i++) {
             uint256 daySign = dayHourSigns[i].day;
-            if (daySign == day ||(daySign + 1 == day && hour <=i)) {
+            if (daySign == day || (daySign + 1 == day && hour <= i)) {
                 count = count.add(dayHourSigns[i].times);
             }
         }
