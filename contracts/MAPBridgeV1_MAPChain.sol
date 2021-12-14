@@ -7,6 +7,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
+interface IWCoin {
+    function deposit() external payable;
+    function transfer(address to, uint value) external returns (bool);
+    function withdraw(uint) external;
+}
+
 
 contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     using SafeMath for uint;
@@ -19,6 +25,8 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     uint public transferPercentage;
     mapping(uint => mapping(uint =>bool)) orderList;
 
+    IWCoin public wcoin;
+
     event logTransferToken(address token, uint amount, uint toChain, uint orderId);
     event logWithdrawToken(address token, uint amount, uint fromChain, uint orderId);
     event logTokenRegiser(bytes32 tokenID, address token);
@@ -26,6 +34,10 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
 
     function setMapToken(address token) external onlyOwner {
         mapToken = IERC20(token);
+    }
+
+    function setWCoin(address token) external onlyOwner {
+        wcoin = IWCoin(token);
     }
 
     function setChainFee(uint chainId, uint fee) external onlyOwner {
@@ -48,11 +60,19 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
         emit logTokenRegiser(id, token);
     }
 
-    function swapOut(address token, address to, uint amount, uint toChain) external {
+    function swapOut(address token, address to, uint amount, uint toChain) external payable{
         uint cFee = chainFee[toChain];
         if (cFee > 0) {
             mapToken.transferFrom(msg.sender, address(this), cFee);
         }
+
+        if (token == address(0)){
+            require(msg.value > 0,"not swap zero");
+            amount = msg.value;
+            wcoin.deposit{value:amount}();
+//            wcoin.transfer()
+        }
+
         IERC20 lockToken = IERC20(token);
         lockToken.transferFrom(msg.sender, address(this), amount);
         emit logTransferToken(token, amount, toChain, orderId++);

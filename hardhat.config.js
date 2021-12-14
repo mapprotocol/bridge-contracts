@@ -54,8 +54,8 @@ module.exports = {
       accounts: [PRIVATE_KEY]
     },
     Map: {
-      url: `http://20.205.187.105:7445`,
-      chainId : 177,
+      url: `http://13.214.151.165:7445`,
+      chainId : 22776,
       accounts: [PRIVATE_KEY]
     },
     Bsc: {
