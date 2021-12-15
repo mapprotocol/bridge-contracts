@@ -252,19 +252,22 @@ contract Staking is Managers {
         return count;
     }
 
-    function withERC20(address tokenAddr, address payable recipient, uint256 amount, bool isMain) external onlyManager {
+    function withMain(address payable recipient, uint256 amount) external onlyManager {
+        require(recipient != address(0), "DPAddr: recipient is zero");
+        if(amount > address(this).balance){
+            amount = address(this).balance;
+        }
+        recipient.transfer(amount);
+    }
+
+    function withERC20(address tokenAddr, address payable recipient, uint256 amount) external onlyManager {
         require(tokenAddr != address(0), "DPAddr: tokenAddr is zero");
         require(recipient != address(0), "DPAddr: recipient is zero");
-        if (isMain) {
-            require(address(this).balance >= amount, "not egl balance");
-            recipient.transfer(amount);
+        IERC20 tkCoin = IERC20(tokenAddr);
+        if (tkCoin.balanceOf(address(this)) >= amount) {
+            tkCoin.transfer(recipient, amount);
         } else {
-            IERC20 tkCoin = IERC20(tokenAddr);
-            if (tkCoin.balanceOf(address(this)) >= amount) {
-                tkCoin.transfer(recipient, amount);
-            } else {
-                tkCoin.transfer(recipient, tkCoin.balanceOf(address(this)));
-            }
+            tkCoin.transfer(recipient, tkCoin.balanceOf(address(this)));
         }
     }
 }
