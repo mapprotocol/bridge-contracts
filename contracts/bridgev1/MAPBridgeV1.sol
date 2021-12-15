@@ -7,21 +7,90 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
+interface IWToken {
+    function deposit() external payable;
+    function transfer(address to, uint value) external returns (bool);
+    function withdraw(uint) external;
+}
+
 
 contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     using SafeMath for uint;
     uint orderId;
 
+    IERC20 public mapToken;
+    address public wToken;
+    uint public transferPercentage;
+
     mapping(bytes32 => address) public tokenRegister;
     //Gas transfer fee charged by the target chain
     mapping(uint => uint) public chainFee;
-    IERC20 public mapToken;
-    uint public transferPercentage;
-    mapping(uint => mapping(uint =>bool)) orderList;
+    mapping(uint => mapping(uint => bool)) orderList;
 
-    event logSwapOut(address token, address to, uint amount, uint toChain, uint orderId);
-    event logWithdrawToken(address token, address to, uint amount, uint fromChain, uint orderId);
+
+    event logSwapOut(address token, address from, address to, uint amount, uint toChain, uint orderId);
+    event logWithdrawToken(address token, address from, address to, uint amount, uint fromChain, uint orderId);
     event logTokenRegiser(bytes32 tokenID, address token);
+
+
+    function getTokenId(address token) internal view returns (bytes32){
+        return keccak256(abi.encodePacked(IERC20Metadata(token).name()));
+    }
+
+    function setOrder(uint fromChain, uint oid) public {
+        orderList[fromChain][oid] = true;
+    }
+
+    modifier checkOrder(uint fromChain, uint oid){
+        require(!orderList[fromChain][oid], "order is have");
+        _;
+    }
+
+    function register(address token) public {
+        bytes32 id = getTokenId(token);
+        tokenRegister[id] = token;
+        emit logTokenRegiser(id, token);
+    }
+
+    function getAmountWithdraw(uint amount) public view returns (uint){
+        if (transferPercentage == 0) {
+            return amount;
+        } else {
+            return amount.mul(uint(10000).sub(transferPercentage)).div(10000);
+        }
+    }
+
+
+    function swapOut(address token, address to, uint amount, uint toChain) external {
+        uint cFee = chainFee[toChain];
+        if (token == address(0)){
+            require(msg.value > 0,"value too low");
+            IWToken(wToken).deposit{value: msg.value}();
+        }else{
+            IERC20(token).transferFrom(msg.sender, address(this), amount);
+        }
+
+        if (cFee > 0 && mapToken == address(0)) {
+            IWToken(wToken).deposit{value:cFee}();
+        }else{
+            mapToken.transferFrom(msg.sender, address(this), cFee);
+        }
+
+        emit logSwapOut(token, msg.sender, to, amount, toChain, orderId++);
+    }
+
+    function withdrawToken(address token, address from, address payable to, uint amount, uint fromChain, uint oid)
+    external onlyOwner checkOrder(fromChain, oid) nonReentrant {
+        setOrder(fromChain, oid);
+        uint amountOut = getAmountWithdraw(amount);
+        if(token == address(0)){
+            IWToken(wToken).withdraw(amountOut);
+            IERC20(token).transfer()(msg.sender, amountOut);
+        }else{
+            IERC20(token).transfer(to, amountOut);
+        }
+        emit logWithdrawToken(token, from, to, amount, fromChain, oid);
+    }
 
 
     function setMapToken(address token) external onlyOwner {
@@ -37,50 +106,7 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
         transferPercentage = fee;
     }
 
-
-    function getTokenId(address token) internal view returns (bytes32){
-        return keccak256(abi.encodePacked(IERC20Metadata(token).name()));
-    }
-
-    function register(address token) public {
-        bytes32 id = getTokenId(token);
-        tokenRegister[id] = token;
-        emit logTokenRegiser(id, token);
-    }
-
-    function swapOut(address token, address to, uint amount, uint toChain) external {
-        uint cFee = chainFee[toChain];
-        if (cFee > 0) {
-            mapToken.transferFrom(msg.sender, address(this), cFee);
-        }
-        IERC20 lockToken = IERC20(token);
-        lockToken.transferFrom(msg.sender, address(this), amount);
-        emit logSwapOut(token, to, amount, toChain, orderId++);
-    }
-
-    function getAmountWithdraw(uint amount) public view returns (uint){
-        if (transferPercentage == 0) {
-            return amount;
-        } else {
-            return amount.mul(uint(10000).sub(transferPercentage)).div(10000);
-        }
-    }
-
-    function setOrder(uint fromChain,uint oid) public{
-        orderList[fromChain][oid] = true;
-    }
-
-    modifier checkOrder(uint fromChain,uint oid){
-        require(!orderList[fromChain][oid],"order is have");
-        _;
-    }
-
-    function withdrawToken(address token, address to,uint amount, uint fromChain, uint oid)
-    external onlyOwner checkOrder(fromChain,oid) nonReentrant{
-        setOrder(fromChain,oid);
-        IERC20 lockToken = IERC20(token);
-        uint amountOut = getAmountWithdraw(amount);
-        lockToken.transfer(to, amountOut);
-        emit logWithdrawToken(token, to,amount, fromChain, oid);
+    function setWToken(address token) external onlyOwner {
+        wToken =token;
     }
 }
