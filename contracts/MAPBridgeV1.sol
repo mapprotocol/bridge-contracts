@@ -19,8 +19,8 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     uint public transferPercentage;
     mapping(uint => mapping(uint =>bool)) orderList;
 
-    event logTransferToken(address token, uint amount, uint toChain, uint orderId);
-    event logWithdrawToken(address token, uint amount, uint fromChain, uint orderId);
+    event logSwapOut(address token, address to, uint amount, uint toChain, uint orderId);
+    event logWithdrawToken(address token, address to, uint amount, uint fromChain, uint orderId);
     event logTokenRegiser(bytes32 tokenID, address token);
 
 
@@ -55,7 +55,7 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
         }
         IERC20 lockToken = IERC20(token);
         lockToken.transferFrom(msg.sender, address(this), amount);
-        emit logTransferToken(token, amount, toChain, orderId++);
+        emit logSwapOut(token, to, amount, toChain, orderId++);
     }
 
     function getAmountWithdraw(uint amount) public view returns (uint){
@@ -75,11 +75,12 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
         _;
     }
 
-    function withdrawToken(address token, uint amount, uint fromChain, uint oid) external onlyOwner checkOrder(fromChain,oid) nonReentrant{
+    function withdrawToken(address token, address to,uint amount, uint fromChain, uint oid)
+    external onlyOwner checkOrder(fromChain,oid) nonReentrant{
         setOrder(fromChain,oid);
         IERC20 lockToken = IERC20(token);
         uint amountOut = getAmountWithdraw(amount);
-        lockToken.transfer(msg.sender, amountOut);
-        emit logWithdrawToken(token, amount, fromChain, oid);
+        lockToken.transfer(to, amountOut);
+        emit logWithdrawToken(token, to,amount, fromChain, oid);
     }
 }

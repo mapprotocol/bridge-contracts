@@ -85,7 +85,7 @@ contract Staking is Managers {
     }
 
     modifier onlyRunning(){
-        require(isRunning,"staking is stop");
+        require(isRunning, "staking is stop");
         _;
     }
 
@@ -94,11 +94,12 @@ contract Staking is Managers {
 
     function staking(uint256 _amount, uint256 _dayCount) external payable onlyRunning {
         require(
+            // _dayCount == 1 || //Formal deployment needs to be deleted
             _dayCount == 30 ||
             _dayCount == 60 ||
             _dayCount == 90, "day error");
 
-        require(msg.value > stakingAmount, "balance is too low");
+        require(msg.value >= stakingSmall, "balance is too low");
 
         _amount = msg.value;
 
@@ -139,7 +140,7 @@ contract Staking is Managers {
     }
 
 
-    function withdraw() external checkEnd(msg.sender) onlyRunning{
+    function withdraw() external checkEnd(msg.sender) onlyRunning {
         userInfo storage u = userInfos[msg.sender];
 
         require(u.stakingStatus == 1, "only withdrawing");
@@ -211,7 +212,7 @@ contract Staking is Managers {
         return u.signTm[u.signTm.length - 1];
     }
 
-    function sign() external onlyRunning{
+    function sign() external onlyRunning {
         address sender = getSender(msg.sender);
         userInfo storage u = userInfos[sender];
 
