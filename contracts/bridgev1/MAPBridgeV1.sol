@@ -28,8 +28,8 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     mapping(uint => mapping(uint => bool)) orderList;
 
 
-    event logSwapOut(address token, address from, address to, uint amount, uint toChain, uint orderId);
-    event logWithdrawToken(address token, address from, address to, uint amount, uint fromChain, uint orderId);
+    event logTransferOut(address token, address from, address to, uint amount, uint toChain, uint orderId);
+    event logTransferIn(address token, address from, address to, uint amount, uint fromChain, uint orderId);
     event logTokenRegiser(bytes32 tokenID, address token);
 
 
@@ -61,7 +61,7 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     }
 
 
-    function swapOut(address token, address to, uint amount, uint toChain) external {
+    function mapTransferOut(address token, address to, uint amount, uint toChain) external payable{
         uint cFee = chainFee[toChain];
         if (token == address(0)){
             require(msg.value > 0,"value too low");
@@ -70,26 +70,26 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
             IERC20(token).transferFrom(msg.sender, address(this), amount);
         }
 
-        if (cFee > 0 && mapToken == address(0)) {
+        if (cFee > 0 && address(mapToken) == address(0)) {
             IWToken(wToken).deposit{value:cFee}();
         }else{
             mapToken.transferFrom(msg.sender, address(this), cFee);
         }
 
-        emit logSwapOut(token, msg.sender, to, amount, toChain, orderId++);
+        emit logTransferOut(token, msg.sender, to, amount, toChain, orderId++);
     }
 
-    function withdrawToken(address token, address from, address payable to, uint amount, uint fromChain, uint oid)
+    function mapTransferIn(address token, address from, address payable to, uint amount, uint fromChain, uint oid)
     external onlyOwner checkOrder(fromChain, oid) nonReentrant {
         setOrder(fromChain, oid);
         uint amountOut = getAmountWithdraw(amount);
         if(token == address(0)){
             IWToken(wToken).withdraw(amountOut);
-            IERC20(token).transfer()(msg.sender, amountOut);
+            IERC20(wToken).transfer(msg.sender, amountOut);
         }else{
             IERC20(token).transfer(to, amountOut);
         }
-        emit logWithdrawToken(token, from, to, amount, fromChain, oid);
+        emit logTransferIn(token, from, to, amount, fromChain, oid);
     }
 
 
