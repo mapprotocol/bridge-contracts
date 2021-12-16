@@ -1,5 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
+require("@nomiclabs/hardhat-etherscan");
 require('dotenv').config()
 const { PRIVATE_KEY, ETH_INFURA_KEY, INFURA_KEY, HECO_SCAN_KEY} = process.env;
 
@@ -80,6 +81,6 @@ module.exports = {
     }
   },
   etherscan:{
-    apiKey: [HECO_SCAN_KEY]
+    apiKey: "CR4UNUCE7SWTN7XFBWM5JAQ8MYSH9VEUZ7"
   }
 };

@@ -89,7 +89,7 @@ contract Router is ReentrancyGuard, Ownable {
             require(succ, "very fail");
             emit LogSwapInFail(hash,message,from,to,amount,fromChainID,toChainID);
         } else {
-            require(vote.voteTx(hash), "vote fail");
+            require(vote.voteTx(hash,msg.sender), "vote fail");
             emit LogSwapInFail(hash,"vote fail",from,to,amount,fromChainID,toChainID);
         }
         if (toChainID == chainID) {

@@ -111,14 +111,14 @@ contract StakingVote is Ownable {
         return have > (all.mul(2).div(3));
     }
 
-    function voteTx(bytes32 hash) onlyStaking(msg.sender) canVote(hash) external returns (bool){
+    function voteTx(bytes32 hash, address voter) onlyStaking(voter) canVote(hash) external returns (bool){
         vote storage v = txVotes[hash];
         if (v.totalVoteAmount == 0) {
             v.totalVoteAmount = allStaking;
         }
-        uint amount = userStaking[msg.sender].amount;
+        uint amount = userStaking[voter].amount;
         v.haveVoteAmount = v.haveVoteAmount.add(amount);
-        LogVote(msg.sender, stakingCoin, amount, hash);
+        LogVote(voter, stakingCoin, amount, hash);
         return checkVoteAmount(v.haveVoteAmount, v.totalVoteAmount);
     }
 
