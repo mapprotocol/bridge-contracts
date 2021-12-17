@@ -22,7 +22,7 @@ contract StakingVote is Ownable {
         uint withdrawTime;
     }
 
-    mapping(address => staking) userStaking;
+    mapping(address => staking) public userStaking;
 
     struct vote {
         uint totalVoteAmount;
@@ -30,7 +30,7 @@ contract StakingVote is Ownable {
         mapping(address => uint) userVote;
     }
 
-    mapping(bytes32 => vote) txVotes;
+    mapping(bytes32 => vote) public txVotes;
 
 
     event LogStake(address from, address coin, uint amount);
@@ -44,12 +44,6 @@ contract StakingVote is Ownable {
 
     modifier onlyStaking(address sender){
         require(userStaking[sender].amount > 0, "only staking");
-        _;
-    }
-
-    modifier canVote(bytes32 txId) {
-        vote storage v = txVotes[txId];
-        require(v.haveVoteAmount < v.totalVoteAmount, "vote is compile");
         _;
     }
 
@@ -111,14 +105,15 @@ contract StakingVote is Ownable {
         return have > (all.mul(2).div(3));
     }
 
-    function voteTx(bytes32 hash, address voter) onlyStaking(voter) canVote(hash) external returns (bool){
+    function voteTx(bytes32 hash, address voter) onlyStaking(voter) external returns (bool){
         vote storage v = txVotes[hash];
-        if (v.totalVoteAmount == 0) {
+        if (v.totalVoteAmount ==0){
             v.totalVoteAmount = allStaking;
         }
+        require(v.haveVoteAmount < v.totalVoteAmount, "vote is compile");
         uint amount = userStaking[voter].amount;
         v.haveVoteAmount = v.haveVoteAmount.add(amount);
-        LogVote(voter, stakingCoin, amount, hash);
+        emit LogVote(voter, stakingCoin, amount, hash);
         return checkVoteAmount(v.haveVoteAmount, v.totalVoteAmount);
     }
 
