@@ -55,6 +55,16 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
         _;
     }
 
+    modifier checkBalance(address token, address sender,uint amount){
+        require(IERC20(token).balanceOf(sender) >= amount,"balance too low");
+        _;
+    }
+
+    modifier checkNativeBalance(address sender,uint amount){
+        require(payable(sender).balance >= amount,"balance too low");
+        _;
+    }
+
     function getTokenId(address token) internal view returns (bytes32){
         return keccak256(abi.encodePacked(IERC20Metadata(token).name()));
     }
@@ -90,12 +100,14 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
 
     function collectChainFee(uint toChainId) public {
         uint cFee = chainFee[toChainId];
+        require(mapToken.balanceOf(msg.sender) >= cFee,"balance too low");
         if (cFee > 0) {
             mapToken.transferFrom(msg.sender, address(this), cFee);
         }
     }
 
-    function transferOutTokenBrun(address token, address to, uint amount, uint toChainId) external payable {
+    function transferOutTokenBurn(address token, address to, uint amount, uint toChainId) external payable virtual
+    checkBalance(token,msg.sender,amount){
         IMAPToken(token).burn(msg.sender, amount);
         collectChainFee(toChainId);
         bytes32 orderId = getOrderID(token, msg.sender, to, amount, toChainId);
@@ -103,7 +115,8 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     }
 
 
-    function transferOutToken(address token, address to, uint amount, uint toChainId) external payable {
+    function transferOutToken(address token, address to, uint amount, uint toChainId) external payable virtual
+    checkBalance(token,msg.sender,amount){
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         collectChainFee(toChainId);
         bytes32 orderId = getOrderID(token, msg.sender, to, amount, toChainId);
@@ -111,7 +124,8 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     }
 
 
-    function transferOutStandard(address to, uint amount, uint toChainId) external payable {
+    function transferOutNative(address to, uint amount, uint toChainId) external payable virtual
+    checkNativeBalance(msg.sender,amount){
         require(msg.value >= amount, "value too low");
         IWToken(wToken).deposit{value : amount}();
         collectChainFee(toChainId);
@@ -120,23 +134,23 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     }
 
 
-    function transferInToken(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain)
+    function transferInToken(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
     external onlyOwner checkOrder(orderId) nonReentrant virtual {
         IERC20(token).transfer(to, amount);
-        emit mapTransferIn(token, from, to, orderId, amount, fromChain, selfChainId);
+        emit mapTransferIn(token, from, to, orderId, amount, fromChain, toChain);
     }
 
-    function transferInTokenMint(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain)
+    function transferInTokenMint(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
     external onlyOwner checkOrder(orderId) nonReentrant virtual {
         IMAPToken(token).mint(to, amount);
-        emit mapTransferIn(token, from, to, orderId, amount, fromChain, selfChainId);
+        emit mapTransferIn(token, from, to, orderId, amount, fromChain, toChain);
     }
 
-    function transferInStandard(address from, address payable to, uint amount, bytes32 orderId, uint fromChain)
+    function transferInNative(address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
     external onlyOwner checkOrder(orderId) nonReentrant virtual {
         IWToken(wToken).withdraw(amount);
         to.transfer(amount);
-        emit mapTransferIn(address(0), from, to, orderId, amount, fromChain, selfChainId);
+        emit mapTransferIn(address(0), from, to, orderId, amount, fromChain, toChain);
     }
 
     function setMapToken(address token) external onlyOwner {
