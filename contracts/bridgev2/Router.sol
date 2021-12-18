@@ -72,7 +72,7 @@ contract Router is ReentrancyGuard, Ownable {
     }
 
 
-    function _withdraw(address _token, uint amount, address to) internal {
+    function _withdraw(address _token, uint amount, address to) public {
         IMapERC20 token = IMapERC20(_token);
         if (token.isMap()) {
             token.mint(to, amount);

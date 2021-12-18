@@ -24,22 +24,24 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     address public wToken;
     uint public transferPercentage;
     uint public selfChainId;
+    bool isMap;
 
     mapping(bytes32 => address) public tokenRegister;
     //Gas transfer fee charged by the target chain
     mapping(uint => uint) public chainFee;
     mapping(bytes32 => bool) orderList;
 
-
-    event logTransferOut(address indexed token, address indexed from, address indexed to, bytes32 orderId, uint amount, uint toChain);
-    event logTransferIn(address indexed token, address indexed from, address indexed to, bytes32 orderId, uint amount, uint fromChain);
-    event logTokenRegiser(bytes32 tokenID, address token);
-
+    event mapTransferOut(address indexed token, address indexed from, address indexed to, bytes32 orderId, uint amount, uint toChain);
+    event mapTransferIn(address indexed token, address indexed from, address indexed to, bytes32 orderId, uint amount, uint fromChain);
+    event mapTokenRegiser(bytes32 tokenID, address token);
 
     constructor(){
         uint _chainId;
         assembly {_chainId := chainid()}
         selfChainId = _chainId;
+        if (selfChainId == 22776) {
+            isMap = true;
+        }
     }
 
     modifier checkOrder(bytes32 orderId){
@@ -48,9 +50,12 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
         _;
     }
 
-
     function getTokenId(address token) internal view returns (bytes32){
         return keccak256(abi.encodePacked(IERC20Metadata(token).name()));
+    }
+
+    function getTokenIdForName(string memory name) internal pure returns (bytes32){
+        return keccak256(abi.encodePacked(name));
     }
 
     function setOrder(bytes32 orderId) public {
@@ -58,13 +63,16 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     }
 
     function getOrderID(address token, address from, address to, uint amount, uint toChainID) public returns (bytes32){
-        return keccak256(abi.encodePacked(nonce++, from, token, to, amount, selfChainId, toChainID));
+        return keccak256(abi.encodePacked(nonce++, from, to, token, amount, selfChainId, toChainID));
     }
 
-    function register(address token) public {
+    function register(address token, string memory name) public {
         bytes32 id = getTokenId(token);
+        if (bytes(name).length > 0) {
+            id = getTokenIdForName(name);
+        }
         tokenRegister[id] = token;
-        emit logTokenRegiser(id, token);
+        emit mapTokenRegiser(id, token);
     }
 
     function getAmountWithdraw(uint amount) public view returns (uint){
@@ -75,42 +83,44 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
         }
     }
 
-
-    function mapTransferOut(address token, address to, uint amount, uint toChainId) external payable {
+    function transferOut(address token, address to, uint amount, uint toChainId) external payable {
         uint cFee = chainFee[toChainId];
         if (token == address(0)) {
-            require(msg.value > 0, "value too low");
-            IWToken(wToken).deposit{value : msg.value}();
+            require(msg.value >= amount, "value too low");
+            IWToken(wToken).deposit{value : amount}();
         } else {
             IERC20(token).transferFrom(msg.sender, address(this), amount);
         }
 
-        if (cFee > 0 && address(mapToken) == address(0)) {
-            IWToken(wToken).deposit{value : cFee}();
-        } else {
-            mapToken.transferFrom(msg.sender, address(this), cFee);
+        if (cFee > 0) {
+            if (address(mapToken) == address(0)) {
+                require(msg.value >= amount.add(cFee), "value too low fee");
+                IWToken(wToken).deposit{value : cFee}();
+            } else {
+                mapToken.transferFrom(msg.sender, address(this), cFee);
+            }
         }
-        bytes32 orderId = getOrderID(token,msg.sender,to,amount,toChainId);
-        emit logTransferOut(token, msg.sender, to, orderId, amount, toChainId);
+        bytes32 orderId = getOrderID(token, msg.sender, to, amount, toChainId);
+        emit mapTransferOut(token, msg.sender, to, orderId, amount, toChainId);
     }
 
-    function mapTransferIn(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
+    function transferIn(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
     external onlyOwner checkOrder(orderId) nonReentrant {
         uint amountOut = getAmountWithdraw(amount);
-        if (toChain == selfChainId){
+        if (toChain == selfChainId) {
+            uint out = amountOut;
+            if (!isMap){out = amount;}
             if (token == address(0)) {
-                IWToken(wToken).withdraw(amountOut);
-                IERC20(wToken).transfer(msg.sender, amountOut);
+                IWToken(wToken).withdraw(out);
+                to.transfer(out);
             } else {
-                IERC20(token).transfer(to, amountOut);
+                IERC20(token).transfer(to, out);
             }
-            emit logTransferIn(token, from, to,orderId, amount, fromChain);
-        }else{
-            emit logTransferOut(token, from, to,orderId, amount, toChain);
+            emit mapTransferIn(token, from, to, orderId, out, fromChain);
+        } else {
+            emit mapTransferOut(token, from, to, orderId, amountOut, toChain);
         }
-
     }
-
 
     function setMapToken(address token) external onlyOwner {
         mapToken = IERC20(token);
