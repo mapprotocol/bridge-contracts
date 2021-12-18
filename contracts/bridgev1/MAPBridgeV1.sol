@@ -16,6 +16,13 @@ interface IWToken {
 }
 
 
+interface IMAPToken {
+    function mint(address to, uint256 amount) external;
+
+    function burn(address from, uint256 amount) external;
+}
+
+
 contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     using SafeMath for uint;
     uint nonce;
@@ -24,24 +31,22 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     address public wToken;
     uint public transferPercentage;
     uint public selfChainId;
-    bool isMap;
 
     mapping(bytes32 => address) public tokenRegister;
     //Gas transfer fee charged by the target chain
     mapping(uint => uint) public chainFee;
     mapping(bytes32 => bool) orderList;
 
-    event mapTransferOut(address indexed token, address indexed from, address indexed to, bytes32 orderId, uint amount, uint toChain);
-    event mapTransferIn(address indexed token, address indexed from, address indexed to, bytes32 orderId, uint amount, uint fromChain);
+    event mapTransferOut(address indexed token, address indexed from, address indexed to,
+        bytes32 orderId, uint amount, uint fromChain, uint toChain);
+    event mapTransferIn(address indexed token, address indexed from, address indexed to,
+        bytes32 orderId, uint amount, uint fromChain, uint toChain);
     event mapTokenRegiser(bytes32 tokenID, address token);
 
     constructor(){
         uint _chainId;
         assembly {_chainId := chainid()}
         selfChainId = _chainId;
-        if (selfChainId == 22776) {
-            isMap = true;
-        }
     }
 
     modifier checkOrder(bytes32 orderId){
@@ -83,43 +88,55 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
         }
     }
 
-    function transferOut(address token, address to, uint amount, uint toChainId) external payable {
+    function collectChainFee(uint toChainId) public {
         uint cFee = chainFee[toChainId];
-        if (token == address(0)) {
-            require(msg.value >= amount, "value too low");
-            IWToken(wToken).deposit{value : amount}();
-        } else {
-            IERC20(token).transferFrom(msg.sender, address(this), amount);
-        }
-
         if (cFee > 0) {
-            if (address(mapToken) == address(0)) {
-                require(msg.value >= amount.add(cFee), "value too low fee");
-                IWToken(wToken).deposit{value : cFee}();
-            } else {
-                mapToken.transferFrom(msg.sender, address(this), cFee);
-            }
+            mapToken.transferFrom(msg.sender, address(this), cFee);
         }
-        bytes32 orderId = getOrderID(token, msg.sender, to, amount, toChainId);
-        emit mapTransferOut(token, msg.sender, to, orderId, amount, toChainId);
     }
 
-    function transferIn(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external onlyOwner checkOrder(orderId) nonReentrant {
-        uint amountOut = getAmountWithdraw(amount);
-        if (toChain == selfChainId) {
-            uint out = amountOut;
-            if (!isMap){out = amount;}
-            if (token == address(0)) {
-                IWToken(wToken).withdraw(out);
-                to.transfer(out);
-            } else {
-                IERC20(token).transfer(to, out);
-            }
-            emit mapTransferIn(token, from, to, orderId, out, fromChain);
-        } else {
-            emit mapTransferOut(token, from, to, orderId, amountOut, toChain);
-        }
+    function transferOutTokenBrun(address token, address to, uint amount, uint toChainId) external payable {
+        IMAPToken(token).burn(msg.sender, amount);
+        collectChainFee(toChainId);
+        bytes32 orderId = getOrderID(token, msg.sender, to, amount, toChainId);
+        emit mapTransferOut(token, msg.sender, to, orderId, amount, selfChainId, toChainId);
+    }
+
+
+    function transferOutToken(address token, address to, uint amount, uint toChainId) external payable {
+        IERC20(token).transferFrom(msg.sender, address(this), amount);
+        collectChainFee(toChainId);
+        bytes32 orderId = getOrderID(token, msg.sender, to, amount, toChainId);
+        emit mapTransferOut(token, msg.sender, to, orderId, amount, selfChainId, toChainId);
+    }
+
+
+    function transferOutStandard(address to, uint amount, uint toChainId) external payable {
+        require(msg.value >= amount, "value too low");
+        IWToken(wToken).deposit{value : amount}();
+        collectChainFee(toChainId);
+        bytes32 orderId = getOrderID(address(0), msg.sender, to, amount, toChainId);
+        emit mapTransferOut(address(0), msg.sender, to, orderId, amount, selfChainId, toChainId);
+    }
+
+
+    function transferInToken(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain)
+    external onlyOwner checkOrder(orderId) nonReentrant virtual {
+        IERC20(token).transfer(to, amount);
+        emit mapTransferIn(token, from, to, orderId, amount, fromChain, selfChainId);
+    }
+
+    function transferInTokenMint(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain)
+    external onlyOwner checkOrder(orderId) nonReentrant virtual {
+        IMAPToken(token).mint(to, amount);
+        emit mapTransferIn(token, from, to, orderId, amount, fromChain, selfChainId);
+    }
+
+    function transferInStandard(address from, address payable to, uint amount, bytes32 orderId, uint fromChain)
+    external onlyOwner checkOrder(orderId) nonReentrant virtual {
+        IWToken(wToken).withdraw(amount);
+        to.transfer(amount);
+        emit mapTransferIn(address(0), from, to, orderId, amount, fromChain, selfChainId);
     }
 
     function setMapToken(address token) external onlyOwner {
