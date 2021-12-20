@@ -74,6 +74,8 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
         selfChainId = _chainId;
         wToken = _wToken;
         mapToken = IERC20(_mapToken);
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(MANAGER_ROLE, msg.sender);
     }
 
     receive() external payable{
