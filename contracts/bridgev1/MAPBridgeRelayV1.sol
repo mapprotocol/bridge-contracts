@@ -11,7 +11,6 @@ import "./MAPBridgeV1.sol";
 contract MAPBridgeRelayV1 is MAPBridgeV1 {
     uint mapChainId = 22776;
 
-
     function transferOutTokenBurn(address token, address to, uint amount, uint toChainId) external payable virtual override
     checkBalance(token,msg.sender,amount){
         IMAPToken(token).burn(msg.sender, amount);

@@ -25,23 +25,23 @@ interface IMAPToken {
 
 contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     using SafeMath for uint;
-    uint nonce;
+    uint public nonce;
 
     IERC20 public mapToken;
-    address public wToken;
-    uint public transferPercentage;
+    address public wToken;          // native wrapped token
+    uint public transferFee;
     uint public selfChainId;
 
     mapping(bytes32 => address) public tokenRegister;
     //Gas transfer fee charged by the target chain
-    mapping(uint => uint) public chainFee;
+    mapping(uint => uint) public chainGasFee;
     mapping(bytes32 => bool) orderList;
 
     event mapTransferOut(address indexed token, address indexed from, address indexed to,
         bytes32 orderId, uint amount, uint fromChain, uint toChain);
     event mapTransferIn(address indexed token, address indexed from, address indexed to,
         bytes32 orderId, uint amount, uint fromChain, uint toChain);
-    event mapTokenRegiser(bytes32 tokenID, address token);
+    event mapTokenRegister(bytes32 tokenID, address token);
 
     constructor(){
         uint _chainId;
@@ -49,8 +49,8 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
         selfChainId = _chainId;
     }
 
-    modifier checkOrder(bytes32 orderId){
-        require(!orderList[orderId], "order is have");
+    modifier checkOrder(bytes32 orderId) {
+        require(!orderList[orderId], "order exist");
         orderList[orderId] = true;
         _;
     }
@@ -61,7 +61,7 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     }
 
     modifier checkNativeBalance(address sender,uint amount){
-        require(payable(sender).balance >= amount,"balance too low");
+        require(payable(sender).balance >= amount,"native balance too low");
         _;
     }
 
@@ -73,33 +73,31 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
         return keccak256(abi.encodePacked(name));
     }
 
-    function setOrder(bytes32 orderId) public {
-        orderList[orderId] = true;
-    }
-
     function getOrderID(address token, address from, address to, uint amount, uint toChainID) public returns (bytes32){
         return keccak256(abi.encodePacked(nonce++, from, to, token, amount, selfChainId, toChainID));
     }
 
     function register(address token, string memory name) public {
-        bytes32 id = getTokenId(token);
+        bytes32 id;
         if (bytes(name).length > 0) {
             id = getTokenIdForName(name);
+        } else {
+            id = getTokenId(token);
         }
         tokenRegister[id] = token;
-        emit mapTokenRegiser(id, token);
+        emit mapTokenRegister(id, token);
     }
 
     function getAmountWithdraw(uint amount) public view returns (uint){
-        if (transferPercentage == 0) {
+        if (transferFee == 0) {
             return amount;
         } else {
-            return amount.mul(uint(10000).sub(transferPercentage)).div(10000);
+            return amount.mul(uint(1000000).sub(transferFee)).div(1000000);
         }
     }
 
     function collectChainFee(uint toChainId) public {
-        uint cFee = chainFee[toChainId];
+        uint cFee = chainGasFee[toChainId];
         require(mapToken.balanceOf(msg.sender) >= cFee,"balance too low");
         if (cFee > 0) {
             mapToken.transferFrom(msg.sender, address(this), cFee);
@@ -158,12 +156,12 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     }
 
     function setChainFee(uint chainId, uint fee) external onlyOwner {
-        chainFee[chainId] = fee;
+        chainGasFee[chainId] = fee;
     }
 
     function setTransferPercentage(uint fee) external onlyOwner {
-        require(fee <= 10000, "Transfer percentage max 10000");
-        transferPercentage = fee;
+        require(fee <= 1000000, "Transfer fee percentage max 1000000");
+        transferFee = fee;
     }
 
     function setWToken(address token) external onlyOwner {

@@ -1,4 +1,4 @@
-## Map Relayer Contracts
+## Map Bridge Contracts
 
 ### 1.  MapCoin Contract
 
