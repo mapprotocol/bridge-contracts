@@ -9,7 +9,16 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./MAPBridgeV1.sol";
 
 contract MAPBridgeRelayV1 is MAPBridgeV1 {
+    using SafeMath for uint;
     uint public transferFee;    // tranfer fee for every token, one in a million
+
+    constructor(address _wToken, address _mapToken){
+        wToken = _wToken;
+        mapToken = IERC20(_mapToken);
+        uint _chainId;
+        assembly {_chainId := chainid()}
+        selfChainId = _chainId;
+    }
 
     function setTransferFee(uint fee) external onlyOwner {
         require(fee <= 1000000, "Transfer fee percentage max 1000000");
@@ -24,22 +33,22 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
         }
     }
 
-    function transferOutTokenBurn(address token, address to, uint amount, uint toChainId) external payable virtual override
+    function transferOutTokenBurn(address token, address to, uint amount, uint toChainId) external  virtual override
     checkBalance(token,msg.sender,amount){
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         collectChainFee(toChainId);
-        outAmount = getAmountWithdraw(amount);
+        uint outAmount = getAmountWithdraw(amount);
         IMAPToken(token).burn(address(this), outAmount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(token, msg.sender, to, orderId, outAmount, selfChainId, toChainId);
     }
 
 
-    function transferOutToken(address token, address to, uint amount, uint toChainId) external payable virtual override
+    function transferOutToken(address token, address to, uint amount, uint toChainId) external  virtual override
     checkBalance(token,msg.sender,amount){
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         collectChainFee(toChainId);
-        outAmount = getAmountWithdraw(amount);
+        uint outAmount = getAmountWithdraw(amount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(token, msg.sender, to, orderId, outAmount, selfChainId, toChainId);
     }
@@ -48,16 +57,17 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
     checkNativeBalance(msg.sender,amount){
         IWToken(wToken).deposit{value : amount}();
         collectChainFee(toChainId);
-        outAmount = getAmountWithdraw(amount);
+        uint outAmount = getAmountWithdraw(amount);
         bytes32 orderId = getOrderID(address(0), msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(address(0), msg.sender, to, orderId, outAmount, selfChainId, toChainId);
     }
 
+
     function transferInToken(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
     external onlyOwner checkOrder(orderId) nonReentrant virtual override {
-        outAmount = getAmountWithdraw(amount);
+        uint outAmount = getAmountWithdraw(amount);
         if (toChain == selfChainId) {
-            checkBalance(token, address(this), outAmount);
+            require(IERC20(token).balanceOf(address(this)) >= amount,"balance too low");
             IERC20(token).transfer(to, outAmount);
             emit mapTransferIn(token, from, to, orderId, outAmount, fromChain, toChain);
         }else{
@@ -68,7 +78,7 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
     function transferInTokenMint(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
     external onlyOwner checkOrder(orderId) nonReentrant virtual override {
         IMAPToken(token).mint(address(this), amount);
-        outAmount = getAmountWithdraw(amount);
+        uint outAmount = getAmountWithdraw(amount);
         if (toChain == selfChainId){
             IERC20(token).transfer(to, outAmount);
             emit mapTransferIn(token, from, to, orderId, outAmount, fromChain, toChain);
@@ -80,9 +90,9 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
 
     function transferInNative(address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
     external onlyOwner checkOrder(orderId) nonReentrant virtual override {
-        outAmount = getAmountWithdraw(amount);
+        uint outAmount = getAmountWithdraw(amount);
         if (toChain == selfChainId){
-            checkBalance(IWToken(wToken), address(this), outAmount);
+            require(IERC20(wToken).balanceOf(address(this)) >= amount,"balance too low");
             IWToken(wToken).withdraw(outAmount);
             to.transfer(outAmount);
             emit mapTransferIn(address(0), from, to, orderId, outAmount, fromChain, toChain);

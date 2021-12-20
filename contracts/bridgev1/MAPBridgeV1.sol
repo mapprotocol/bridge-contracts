@@ -43,11 +43,13 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
         bytes32 orderId, uint amount, uint fromChain, uint toChain);
     event mapTokenRegister(bytes32 tokenID, address token);
 
+
     constructor(){
         uint _chainId;
         assembly {_chainId := chainid()}
         selfChainId = _chainId;
     }
+
 
     modifier checkOrder(bytes32 orderId) {
         require(!orderList[orderId], "order exist");
@@ -88,15 +90,15 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
         emit mapTokenRegister(id, token);
     }
 
-    function collectChainFee(uint toChainId) public {
+    function collectChainFee(uint toChainId) public{
         uint cFee = chainGasFee[toChainId];
-        require(mapToken.balanceOf(msg.sender) >= cFee,"balance too low");
         if (cFee > 0) {
+            require(mapToken.balanceOf(msg.sender) >= cFee,"balance too low");
             mapToken.transferFrom(msg.sender, address(this), cFee);
         }
     }
 
-    function transferOutTokenBurn(address token, address to, uint amount, uint toChainId) external payable virtual
+    function transferOutTokenBurn(address token, address to, uint amount, uint toChainId) external virtual
     checkBalance(token,msg.sender,amount){
         IMAPToken(token).burn(msg.sender, amount);
         collectChainFee(toChainId);
@@ -105,7 +107,7 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     }
 
 
-    function transferOutToken(address token, address to, uint amount, uint toChainId) external payable virtual
+    function transferOutToken(address token, address to, uint amount, uint toChainId) external virtual
     checkBalance(token,msg.sender,amount){
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         collectChainFee(toChainId);
@@ -137,7 +139,7 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     }
 
     function transferInNative(address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external onlyOwner checkOrder(orderId) checkBalance(IWToken(wToken), address(this), amount) nonReentrant virtual {
+    external onlyOwner checkOrder(orderId) checkBalance(wToken, address(this), amount) nonReentrant virtual {
         IWToken(wToken).withdraw(amount);
         to.transfer(amount);
         emit mapTransferIn(address(0), from, to, orderId, amount, fromChain, toChain);
