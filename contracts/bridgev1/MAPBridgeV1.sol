@@ -29,7 +29,7 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
 
     IERC20 public mapToken;
     address public wToken;          // native wrapped token
-    uint public transferFee;
+
     uint public selfChainId;
 
     mapping(bytes32 => address) public tokenRegister;
@@ -88,14 +88,6 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
         emit mapTokenRegister(id, token);
     }
 
-    function getAmountWithdraw(uint amount) public view returns (uint){
-        if (transferFee == 0) {
-            return amount;
-        } else {
-            return amount.mul(uint(1000000).sub(transferFee)).div(1000000);
-        }
-    }
-
     function collectChainFee(uint toChainId) public {
         uint cFee = chainGasFee[toChainId];
         require(mapToken.balanceOf(msg.sender) >= cFee,"balance too low");
@@ -133,7 +125,7 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
 
 
     function transferInToken(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external onlyOwner checkOrder(orderId) nonReentrant virtual {
+    external onlyOwner checkOrder(orderId) checkBalance(token, address(this), amount) nonReentrant virtual {
         IERC20(token).transfer(to, amount);
         emit mapTransferIn(token, from, to, orderId, amount, fromChain, toChain);
     }
@@ -145,7 +137,7 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     }
 
     function transferInNative(address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external onlyOwner checkOrder(orderId) nonReentrant virtual {
+    external onlyOwner checkOrder(orderId) checkBalance(IWToken(wToken), address(this), amount) nonReentrant virtual {
         IWToken(wToken).withdraw(amount);
         to.transfer(amount);
         emit mapTransferIn(address(0), from, to, orderId, amount, fromChain, toChain);
@@ -157,11 +149,6 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
 
     function setChainFee(uint chainId, uint fee) external onlyOwner {
         chainGasFee[chainId] = fee;
-    }
-
-    function setTransferPercentage(uint fee) external onlyOwner {
-        require(fee <= 1000000, "Transfer fee percentage max 1000000");
-        transferFee = fee;
     }
 
     function setWToken(address token) external onlyOwner {
