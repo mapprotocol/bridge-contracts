@@ -3,9 +3,12 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+
+
 
 interface IWToken {
     function deposit() external payable;
@@ -19,11 +22,32 @@ interface IWToken {
 interface IMAPToken {
     function mint(address to, uint256 amount) external;
 
-    function burn(address from, uint256 amount) external;
+    function burn(uint256 amount) external;
+
+    function burnFrom(address from, uint256 amount) external;
 }
 
 
-contract MAPBridgeV1 is ReentrancyGuard, Ownable {
+contract Role is AccessControl{
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+
+    constructor(){
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(MANAGER_ROLE, msg.sender);
+    }
+
+    modifier onlyManager(){
+        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
+        _;
+    }
+
+    function addManager(address manager) external onlyRole(DEFAULT_ADMIN_ROLE){
+        _setupRole(MANAGER_ROLE, manager);
+    }
+}
+
+
+contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
     using SafeMath for uint;
     uint public nonce;
 
@@ -44,10 +68,16 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
     event mapTokenRegister(bytes32 tokenID, address token);
 
 
-    constructor(){
+    function initialize(address _wToken,address _mapToken) public initializer{
         uint _chainId;
         assembly {_chainId := chainid()}
         selfChainId = _chainId;
+        wToken = _wToken;
+        mapToken = IERC20(_mapToken);
+    }
+
+    receive() external payable{
+        IWToken(wToken).deposit{value:msg.value}();
     }
 
 
@@ -100,7 +130,7 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
 
     function transferOutTokenBurn(address token, address to, uint amount, uint toChainId) external virtual
     checkBalance(token,msg.sender,amount){
-        IMAPToken(token).burn(msg.sender, amount);
+        IMAPToken(token).burnFrom(msg.sender, amount);
         collectChainFee(toChainId);
         bytes32 orderId = getOrderID(token, msg.sender, to, amount, toChainId);
         emit mapTransferOut(token, msg.sender, to, orderId, amount, selfChainId, toChainId);
@@ -127,33 +157,43 @@ contract MAPBridgeV1 is ReentrancyGuard, Ownable {
 
 
     function transferInToken(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external onlyOwner checkOrder(orderId) checkBalance(token, address(this), amount) nonReentrant virtual {
+    external checkOrder(orderId) checkBalance(token, address(this), amount) nonReentrant virtual onlyManager{
         IERC20(token).transfer(to, amount);
         emit mapTransferIn(token, from, to, orderId, amount, fromChain, toChain);
     }
 
     function transferInTokenMint(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external onlyOwner checkOrder(orderId) nonReentrant virtual {
+    external checkOrder(orderId) nonReentrant virtual onlyManager{
         IMAPToken(token).mint(to, amount);
         emit mapTransferIn(token, from, to, orderId, amount, fromChain, toChain);
     }
 
     function transferInNative(address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external onlyOwner checkOrder(orderId) checkBalance(wToken, address(this), amount) nonReentrant virtual {
+    external checkOrder(orderId) checkBalance(wToken, address(this), amount) nonReentrant virtual onlyManager{
         IWToken(wToken).withdraw(amount);
         to.transfer(amount);
         emit mapTransferIn(address(0), from, to, orderId, amount, fromChain, toChain);
     }
 
-    function setMapToken(address token) external onlyOwner {
+    function setMapToken(address token) external  onlyManager{
         mapToken = IERC20(token);
     }
 
-    function setChainFee(uint chainId, uint fee) external onlyOwner {
+    function setChainFee(uint chainId, uint fee) external  onlyManager{
         chainGasFee[chainId] = fee;
     }
 
-    function setWToken(address token) external onlyOwner {
+    function setWToken(address token) external  onlyManager{
         wToken = token;
     }
+
+    function without(address token, address payable recipient,uint256 amount) public onlyManager{
+        if(token ==address(0)){
+            IWToken(wToken).withdraw(amount);
+            recipient.transfer(amount);
+        }else{
+            IERC20(token).transfer(recipient,amount);
+        }
+    }
+
 }
