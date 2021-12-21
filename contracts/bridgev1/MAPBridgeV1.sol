@@ -79,6 +79,7 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
     }
 
    receive() external payable{
+       require(msg.sender == wToken,"only wToken");
    }
 
 
