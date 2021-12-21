@@ -79,7 +79,7 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
     }
 
    receive() external payable{
-       require(msg.sender == wToken,"only wToken");
+       require(msg.sender ==wToken,"only wToken");
    }
 
 
@@ -111,7 +111,7 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
         return keccak256(abi.encodePacked(nonce++, from, to, token, amount, selfChainId, toChainID));
     }
 
-    function register(address token, string memory name) public {
+    function register(address token, string memory name) public onlyManager{
         bytes32 id;
         if (bytes(name).length > 0) {
             id = getTokenIdForName(name);
@@ -122,7 +122,7 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
         emit mapTokenRegister(id, token);
     }
 
-    function collectChainFee(uint toChainId) public{
+    function collectChainFee(uint toChainId) internal{
         uint cFee = chainGasFee[toChainId];
         if (cFee > 0) {
             require(mapToken.balanceOf(msg.sender) >= cFee,"balance too low");
@@ -177,16 +177,8 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
         emit mapTransferIn(address(0), from, to, orderId, amount, fromChain, toChain);
     }
 
-    function setMapToken(address token) external  onlyManager{
-        mapToken = IERC20(token);
-    }
-
     function setChainFee(uint chainId, uint fee) external  onlyManager{
         chainGasFee[chainId] = fee;
-    }
-
-    function setWToken(address token) external  onlyManager{
-        wToken = token;
     }
 
     function withdraw(address token, address payable receiver,uint256 amount) public onlyManager{

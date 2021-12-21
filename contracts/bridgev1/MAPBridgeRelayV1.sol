@@ -25,12 +25,19 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
         }
     }
 
+    function collectChainFee(uint toChainId,uint native) internal{
+        uint cFee = chainGasFee[toChainId];
+        if (cFee > 0) {
+            require(msg.value >= cFee.add(native),"balance too low");
+        }
+    }
+
     function transferOutTokenBurn(address token, address to, uint amount, uint toChainId) external  virtual override
     checkBalance(token,msg.sender,amount){
         IERC20(token).transferFrom(msg.sender, address(this), amount);
-        collectChainFee(toChainId);
+        collectChainFee(toChainId,0);
         uint outAmount = getAmountWithdraw(amount);
-        IMAPToken(token).burnFrom(address(this), outAmount);
+        IMAPToken(token).burn(outAmount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(token, msg.sender, to, orderId, outAmount, selfChainId, toChainId);
     }
@@ -39,7 +46,7 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
     function transferOutToken(address token, address to, uint amount, uint toChainId) external  virtual override
     checkBalance(token,msg.sender,amount){
         IERC20(token).transferFrom(msg.sender, address(this), amount);
-        collectChainFee(toChainId);
+        collectChainFee(toChainId,0);
         uint outAmount = getAmountWithdraw(amount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(token, msg.sender, to, orderId, outAmount, selfChainId, toChainId);
@@ -48,7 +55,7 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
     function transferOutNative(address to, uint amount, uint toChainId) external payable virtual override
     checkNativeBalance(msg.sender,amount){
         IWToken(wToken).deposit{value : amount}();
-        collectChainFee(toChainId);
+        collectChainFee(toChainId,amount);
         uint outAmount = getAmountWithdraw(amount);
         bytes32 orderId = getOrderID(address(0), msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(address(0), msg.sender, to, orderId, outAmount, selfChainId, toChainId);
