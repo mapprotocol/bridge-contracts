@@ -11,6 +11,8 @@ import "./MAPBridgeV1.sol";
 contract MAPBridgeRelayV1 is MAPBridgeV1 {
     using SafeMath for uint;
     uint public transferFee;    // tranfer fee for every token, one in a million
+    mapping (address => uint) public transferFeeList;
+
 
     function setTransferFee(uint fee) external onlyManager {
         require(fee <= 1000000, "Transfer fee percentage max 1000000");
@@ -37,6 +39,7 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         collectChainFee(toChainId,0);
         uint outAmount = getAmountWithdraw(amount);
+        transferFeeList[token] = transferFeeList[token].add(amount).sub(outAmount);
         IMAPToken(token).burn(outAmount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(token, msg.sender, to, orderId, outAmount, selfChainId, toChainId);
@@ -48,6 +51,7 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         collectChainFee(toChainId,0);
         uint outAmount = getAmountWithdraw(amount);
+        transferFeeList[token] = transferFeeList[token].add(amount).sub(outAmount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(token, msg.sender, to, orderId, outAmount, selfChainId, toChainId);
     }
@@ -57,6 +61,7 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
         IWToken(wToken).deposit{value : amount}();
         collectChainFee(toChainId,amount);
         uint outAmount = getAmountWithdraw(amount);
+        transferFeeList[address(0)] = transferFeeList[address(0)].add(amount).sub(outAmount);
         bytes32 orderId = getOrderID(address(0), msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(address(0), msg.sender, to, orderId, outAmount, selfChainId, toChainId);
     }

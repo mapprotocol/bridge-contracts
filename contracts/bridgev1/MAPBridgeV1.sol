@@ -61,6 +61,8 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
     mapping(uint => uint) public chainGasFee;
     mapping(bytes32 => bool) orderList;
 
+    uint public chainGasFees;
+
     event mapTransferOut(address indexed token, address indexed from, address indexed to,
         bytes32 orderId, uint amount, uint fromChain, uint toChain);
     event mapTransferIn(address indexed token, address indexed from, address indexed to,
@@ -126,6 +128,7 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
         uint cFee = chainGasFee[toChainId];
         if (cFee > 0) {
             require(mapToken.balanceOf(msg.sender) >= cFee,"balance too low");
+            chainGasFees = chainGasFees.add(cFee);
             mapToken.transferFrom(msg.sender, address(this), cFee);
         }
     }
