@@ -55,7 +55,7 @@ module.exports = {
       accounts: [PRIVATE_KEY]
     },
     Map: {
-      url: `http://13.214.151.165:7445`,
+      url: `https://poc2-rpc.maplabs.io`,
       chainId : 22776,
       accounts: [PRIVATE_KEY]
     },
