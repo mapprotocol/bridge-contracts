@@ -188,12 +188,12 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
         wToken = token;
     }
 
-    function withdraw(address token, address payable recipient,uint256 amount) public onlyManager{
+    function withdraw(address token, address payable receiver,uint256 amount) public onlyManager{
         if(token == address(0)){
             IWToken(wToken).withdraw(amount);
-            recipient.transfer(amount);
+            receiver.transfer(amount);
         }else{
-            IERC20(token).transfer(recipient,amount);
+            IERC20(token).transfer(receiver,amount);
         }
     }
 }
