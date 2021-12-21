@@ -93,4 +93,7 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
         }
     }
 
+    constructor(){
+        initialize(0x3CDF7A63f514092b42FFA697aC01D81d37A2F34d,0x0000000000000000000000000000000000000000);
+    }
 }

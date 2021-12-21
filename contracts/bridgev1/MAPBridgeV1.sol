@@ -78,9 +78,8 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
         _setupRole(MANAGER_ROLE, msg.sender);
     }
 
-    receive() external payable{
-        IWToken(wToken).deposit{value:msg.value}();
-    }
+   receive() external payable{
+   }
 
 
     modifier checkOrder(bytes32 orderId) {
