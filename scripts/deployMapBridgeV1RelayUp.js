@@ -22,7 +22,7 @@ async function main() {
     console.log("ProxyAdmin address:", mProxyAdmin.address);
 
 // initialize(0x3CDF7A63f514092b42FFA697aC01D81d37A2F34d,0x0000000000000000000000000000000000000000);
-    const data = await mProxyAdmin.getInitCallData("0x3CDF7A63f514092b42FFA697aC01D81d37A2F34d","0x0000000000000000000000000000000000000000");
+    const data = await mProxyAdmin.getInitCallData("0x13cb04d4a5dfb6398fc5ab005a6c84337256ee23","0x0000000000000000000000000000000000000000");
 
     console.log("data:", data);
 
