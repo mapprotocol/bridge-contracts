@@ -1,6 +1,10 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
-require("@nomiclabs/hardhat-etherscan");
+require('hardhat-gas-reporter')
+require('hardhat-spdx-license-identifier')
+require('hardhat-deploy')
+require('hardhat-abi-exporter')
+require('@nomiclabs/hardhat-etherscan')
 require('dotenv').config()
 const { PRIVATE_KEY, ETH_INFURA_KEY, INFURA_KEY, HECO_SCAN_KEY} = process.env;
 

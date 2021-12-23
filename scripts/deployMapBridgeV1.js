@@ -21,6 +21,7 @@ async function main() {
 
     console.log("MAPBridgeV1 address:", mMAPBridgeV1.address);
 
+    mMAPBridgeV1.initialize("0xc504210d66935fe6c066911ed1ffdef404b4ae0e","0x9E976F211daea0D652912AB99b0Dc21a7fD728e4");
 
     // await hre.run("verify:verify", {
     //     address: mMAPBridgeV1.address
