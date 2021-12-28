@@ -71,24 +71,6 @@ module.exports = {
       gasMultiplier: 1.5,
       gasPrice: 5.5 * 1000000000
     },
-    bsctest: {
-      url: `https://data-seed-prebsc-2-s3.binance.org:8545`,
-      accounts: [PRIVATE_KEY],
-      chainId: 97,
-      gasMultiplier: 2,
-      tags: ['test'],
-    },
-    hardhat: {
-      forking: {
-        enabled: true,
-        url: `https://bsctest.pls2e.cc`,
-        url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
-      },
-      live: true,
-      saveDeployments: false,
-      tags: ['test', 'local'],
-      timeout: 2000000,
-    },
     MaticTest: {
       url: `https://rpc-mumbai.maticvigil.com/`,
       chainId : 80001,
