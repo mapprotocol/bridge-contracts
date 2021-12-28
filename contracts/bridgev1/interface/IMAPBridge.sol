@@ -1,5 +1,6 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
-// SPDX-License-Identifier: UNLICENSED
 
 interface IMAPBridge {
     function transferOutTokenBurn(address token, address to, uint amount, uint toChainId) external virtual;

@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
 
-// SPDX-License-Identifier: UNLICENSED
 
 interface IRegister {
     function sourceCorrespond(uint256 sourceChainID, address sourceMapToken) external view returns (address mapToken);

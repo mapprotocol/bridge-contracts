@@ -1,16 +1,15 @@
-require("@nomiclabs/hardhat-waffle");
-require("@nomiclabs/hardhat-ethers");
+require('@nomiclabs/hardhat-waffle')
 require('hardhat-gas-reporter')
 require('hardhat-spdx-license-identifier')
 require('hardhat-deploy')
 require('hardhat-abi-exporter')
+require('@nomiclabs/hardhat-ethers')
+require('dotenv/config')
 require('@nomiclabs/hardhat-etherscan')
-require('dotenv').config()
+
 const { PRIVATE_KEY, ETH_INFURA_KEY, INFURA_KEY, HECO_SCAN_KEY} = process.env;
 
 
-// This is a sample Hardhat task. To learn how to create your own go to
-// https://hardhat.org/guides/create-task.html
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners();
 
@@ -19,15 +18,77 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   }
 });
 
-// You need to export an object to set up your config
-// Go to https://hardhat.org/config/ to learn more
 
-/**
- * @type import('hardhat/config').HardhatUserConfig
- */
 module.exports = {
-  solidity: "0.8.7",
+  defaultNetwork: 'hardhat',
+  abiExporter: {
+    path: './abi',
+    clear: false,
+    flat: true,
+  },
+  namedAccounts: {
+    deployer: {
+      default: 0,
+      1: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
+      3: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
+      22776: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
+    },
+    wcoin: {
+      default: 0,
+      1: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+      3: '0xf70949bc9b52deffcda63b0d15608d601e3a7c49',
+      22776: '0x13cb04d4a5dfb6398fc5ab005a6c84337256ee23',
+    },
+    mapcoin: {
+      default: 0,
+      1: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+      3: '0x2020f4b99433067F4a5ED99Ce8392d94a8AC70d1',
+      22776: '0x0000000000000000000000000000000000000000',
+    },
+    usdt: {
+      default: 0,
+      22776: '0x33daba9618a75a7aff103e53afe530fbacf4a3dd',
+    },
+    usdc: {
+      default: 0,
+      22776: '0x9f722b2cb30093f766221fd0d37964949ed66918',
+    },
+    eth: {
+      default: 0,
+      22776: '0x05ab928d446d8ce6761e368c8e7be03c3168a9ec',
+    },
+    idv: {
+      default: 0,
+      22776: '0xeac6cfd6e9e2fa033d85b7abdb6b14fe8aa71f2a',
+    },
+  },
+
   networks: {
+    bscmain: {
+      url: `https://bsc-dataseed2.defibit.io/`,
+      accounts: [PRIVATE_KEY],
+      chainId: 56,
+      gasMultiplier: 1.5,
+      gasPrice: 5.5 * 1000000000
+    },
+    bsctest: {
+      url: `https://data-seed-prebsc-2-s3.binance.org:8545`,
+      accounts: [PRIVATE_KEY],
+      chainId: 97,
+      gasMultiplier: 2,
+      tags: ['test'],
+    },
+    hardhat: {
+      forking: {
+        enabled: true,
+        url: `https://bsctest.pls2e.cc`,
+        url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
+      },
+      live: true,
+      saveDeployments: false,
+      tags: ['test', 'local'],
+      timeout: 2000000,
+    },
     MaticTest: {
       url: `https://rpc-mumbai.maticvigil.com/`,
       chainId : 80001,
@@ -82,9 +143,38 @@ module.exports = {
       url: `https://rpc.truescan.network/`,
       chainId : 19330,
       accounts: [PRIVATE_KEY]
-    }
+    },
   },
-  etherscan:{
-    apiKey: "CR4UNUCE7SWTN7XFBWM5JAQ8MYSH9VEUZ7"
-  }
-};
+  solidity: {
+    compilers: [
+      {
+        version: '0.8.7',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+      {
+        version: '0.4.22',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+    ],
+  },
+  spdxLicenseIdentifier: {
+    overwrite: true,
+    runOnCompile: true,
+  },
+  mocha: {
+    timeout: 2000000,
+  },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY,
+  },
+}
