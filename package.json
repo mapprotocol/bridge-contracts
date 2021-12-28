@@ -1,5 +1,5 @@
 {
-  "name": "Athena-contract",
+  "name": "relayer-contract",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ZDefi/Athena-contract.git"
+    "url": "https://github.com/mapprotocol/contracts.git"
   },
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ZDefi/Athena-contract/issues"
+    "url": "https://github.com/mapprotocol/contracts/issues"
   },
-  "homepage": "https://github.com/ZDefi/Athena-contract#readme",
+  "homepage": "https://github.com/mapprotocol/contracts#readme",
   "dependencies": {
     "@nomiclabs/hardhat-etherscan": "^2.1.8",
     "bignumber.js": "^9.0.1",
