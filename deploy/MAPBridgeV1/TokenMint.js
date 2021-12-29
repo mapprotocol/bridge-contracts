@@ -11,16 +11,22 @@ module.exports = async function ({ ethers, deployments}) {
 
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-  await deploy('NFTBridge', {
+  await deploy('Token2', {
     from: deployer.address,
-    args: [],
+    args: [deployer.address],
     log: true,
-    contract: 'NFTBridge',
+    contract: 'Token2',
   })
-  let map = await ethers.getContract('NFTBridge');
+  let token = await ethers.getContract('Token2');
 
-  console.log("NFTBridge",map.address);
+  console.log("Token2",token.address);
+
+
+  await hre.run("verify:verify", {
+      address: token.address,
+      constructorArguments:[deployer.address]
+  });
 
 }
 
-module.exports.tags = ['BridgeNft']
+module.exports.tags = ['TokenMint']

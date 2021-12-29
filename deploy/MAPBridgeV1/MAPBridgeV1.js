@@ -11,6 +11,16 @@ module.exports = async function ({ ethers, deployments}) {
 
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
+  // await deploy('StandardToken', {
+  //   from: deployer.address,
+  //   args: ['Test token','TT'],
+  //   log: true,
+  //   contract: 'StandardToken',
+  // })
+  // let token = await ethers.getContract('StandardToken');
+  //
+  // console.log("StandardToken",token.address);
+
   await deploy('MAPBridgeV1', {
     from: deployer.address,
     args: [],

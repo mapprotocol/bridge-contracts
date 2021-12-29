@@ -5,8 +5,10 @@
   "main": "index.js",
   "scripts": {
     "map:deploy:bridgerelay": "npx hardhat deploy --tags MAPBridgeRelayV1 --network Map",
-    "eth:deploy:bridge": "npx hardhat deploy --tags SwapMiningDefaultList --network bsctest",
-    "map:deploy:addmanager": "npx hardhat deploy --tags AddManager --network Map"
+    "eth:deploy:bridge": "npx hardhat deploy --tags MAPBridgeV1 --network Eth",
+    "bsc:deploy:bridge": "npx hardhat deploy --tags MAPBridgeV1 --network BscTest",
+    "map:deploy:addmanager": "npx hardhat deploy --tags AddManager --network Map",
+    "bsc:deploy:nftBridge": " npx hardhat deploy --tags BridgeNft --network BscTest"
   },
   "repository": {
     "type": "git",
