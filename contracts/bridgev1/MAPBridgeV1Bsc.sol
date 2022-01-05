@@ -48,7 +48,7 @@ contract Role is AccessControl{
 }
 
 
-contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
+contract MAPBridgeV1Bsc is ReentrancyGuard,Role,Initializable{
     using SafeMath for uint;
     uint public nonce;
 
@@ -82,7 +82,7 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
     }
 
    receive() external payable{
-       require(msg.sender == wToken,"only wToken");
+//       require(msg.sender == wToken,"only wToken");
    }
 
 
@@ -94,6 +94,11 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
 
     modifier checkBalance(address token, address sender,uint amount){
         require(IERC20(token).balanceOf(sender) >= amount,"balance too low");
+        _;
+    }
+
+    modifier checkNativeBalance(address sender,uint amount){
+        require(payable(sender).balance >= amount,"native balance too low");
         _;
     }
 
@@ -125,8 +130,7 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
         if (cFee > 0) {
             require(mapToken.balanceOf(msg.sender) >= cFee,"balance too low");
             chainGasFees = chainGasFees.add(cFee);
-//            mapToken.transferFrom(msg.sender, address(this), cFee);
-            TransferHelper.safeTransferFrom(address(mapToken),msg.sender,address(this),cFee);
+            mapToken.transferFrom(msg.sender, address(this), cFee);
         }
     }
 
@@ -141,15 +145,15 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
 
     function transferOutToken(address token, address to, uint amount, uint toChainId) external virtual
     checkBalance(token,msg.sender,amount){
-//        IERC20(token).transferFrom(msg.sender, address(this), amount);
-        TransferHelper.safeTransferFrom(token,msg.sender,address(this),amount);
+        IERC20(token).transferFrom(msg.sender, address(this), amount);
         collectChainFee(toChainId);
         bytes32 orderId = getOrderID(token, msg.sender, to, amount, toChainId);
         emit mapTransferOut(token, msg.sender, to, orderId, amount, selfChainId, toChainId);
     }
 
 
-    function transferOutNative(address to, uint amount, uint toChainId) external payable virtual {
+    function transferOutNative(address to, uint amount, uint toChainId) external payable virtual
+    checkNativeBalance(msg.sender,amount){
         require(msg.value >= amount, "value too low");
         IWToken(wToken).deposit{value : amount}();
         collectChainFee(toChainId);
@@ -160,8 +164,7 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
 
     function transferInToken(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
     external checkOrder(orderId) checkBalance(token, address(this), amount) nonReentrant virtual onlyManager{
-//        IERC20(token).transfer(to, amount);
-        TransferHelper.safeTransfer(token,to,amount);
+        IERC20(token).transfer(to, amount);
         emit mapTransferIn(token, from, to, orderId, amount, fromChain, toChain);
     }
 
@@ -172,11 +175,9 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
     }
 
     function transferInNative(address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external checkOrder(orderId) checkBalance(wToken, address(this), amount) nonReentrant virtual onlyManager{
-//        IWToken(wToken).withdraw(amount);
-//        to.transfer(amount);
-        TransferHelper.safeWithdraw(wToken,amount);
-        TransferHelper.safeTransferETH(to,amount);
+    external payable nonReentrant virtual onlyManager{
+        IWToken(wToken).withdraw(amount);
+        to.transfer(amount);
         emit mapTransferIn(address(0), from, to, orderId, amount, fromChain, toChain);
     }
 
@@ -191,35 +192,5 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
         }else{
             IERC20(token).transfer(receiver,amount);
         }
-    }
-}
-
-library TransferHelper {
-    function safeWithdraw(address wtoken,uint value)internal{
-        (bool success, bytes memory data) = wtoken.call(abi.encodeWithSelector(0x2e1a7d4d,value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), 'TransferHelper: WiTHDRAW_FAILED');
-    }
-
-    function safeApprove(address token, address to, uint value) internal {
-        // bytes4(keccak256(bytes('approve(address,uint256)')));
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(0x095ea7b3, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), 'TransferHelper: APPROVE_FAILED');
-    }
-
-    function safeTransfer(address token, address to, uint value) internal {
-        // bytes4(keccak256(bytes('transfer(address,uint256)')));
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(0xa9059cbb, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), 'TransferHelper: TRANSFER_FAILED');
-    }
-
-    function safeTransferFrom(address token, address from, address to, uint value) internal {
-        // bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(0x23b872dd, from, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), 'TransferHelper: TRANSFER_FROM_FAILED');
-    }
-
-    function safeTransferETH(address to, uint value) internal {
-        (bool success,) = to.call{value:value}(new bytes(0));
-        require(success, 'TransferHelper: ETH_TRANSFER_FAILED');
     }
 }

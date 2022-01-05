@@ -35,9 +35,10 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
         }
     }
 
-    function transferOutTokenBurn(address token, address to, uint amount, uint toChainId) external  virtual override
-    checkBalance(token,msg.sender,amount){
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
+    function transferOutTokenBurn(address token, address to, uint amount, uint toChainId) external virtual override
+    checkBalance(token,msg.sender,amount)  {
+        //IERC20(token).transferFrom(msg.sender, address(this), amount);
+        TransferHelper.safeTransferFrom(token,msg.sender,address(this),amount);
         collectChainFee(toChainId,0);
         uint outAmount = getAmountWithdraw(amount);
         transferFeeList[token] = transferFeeList[token].add(amount).sub(outAmount);
@@ -47,9 +48,10 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
     }
 
 
-    function transferOutToken(address token, address to, uint amount, uint toChainId) external  virtual override
-    checkBalance(token,msg.sender,amount){
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
+    function transferOutToken(address token, address to, uint amount, uint toChainId) external virtual override
+    checkBalance(token,msg.sender,amount)  {
+        //IERC20(token).transferFrom(msg.sender, address(this), amount);
+        TransferHelper.safeTransferFrom(token,msg.sender,address(this),amount);
         collectChainFee(toChainId,0);
         uint outAmount = getAmountWithdraw(amount);
         transferFeeList[token] = transferFeeList[token].add(amount).sub(outAmount);
@@ -57,8 +59,7 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
         emit mapTransferOut(token, msg.sender, to, orderId, outAmount, selfChainId, toChainId);
     }
 
-    function transferOutNative(address to, uint amount, uint toChainId) external payable virtual override
-    checkNativeBalance(msg.sender,amount){
+    function transferOutNative(address to, uint amount, uint toChainId) external payable virtual override {
         IWToken(wToken).deposit{value : amount}();
         collectChainFee(toChainId,amount);
         uint outAmount = getAmountWithdraw(amount);
@@ -73,7 +74,8 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
         uint outAmount = getAmountWithdraw(amount);
         if (toChain == selfChainId) {
             require(IERC20(token).balanceOf(address(this)) >= amount,"balance too low");
-            IERC20(token).transfer(to, outAmount);
+//            IERC20(token).transfer(to, outAmount);
+            TransferHelper.safeTransfer(token,to,amount);
             emit mapTransferIn(token, from, to, orderId, outAmount, fromChain, toChain);
         }else{
             emit mapTransferOut(token, from, to, orderId, outAmount, fromChain, toChain);
@@ -85,10 +87,11 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
         IMAPToken(token).mint(address(this), amount);
         uint outAmount = getAmountWithdraw(amount);
         if (toChain == selfChainId){
-            IERC20(token).transfer(to, outAmount);
+//            IERC20(token).transfer(to, outAmount);
+            TransferHelper.safeTransfer(token,to,amount);
             emit mapTransferIn(token, from, to, orderId, outAmount, fromChain, toChain);
         }else{
-            IMAPToken(token).burnFrom(address(this), outAmount);
+            IMAPToken(token).burn(outAmount);
             emit mapTransferOut(token, from, to, orderId, outAmount, fromChain, toChain);
         }
     }
@@ -98,15 +101,17 @@ contract MAPBridgeRelayV1 is MAPBridgeV1 {
         uint outAmount = getAmountWithdraw(amount);
         if (toChain == selfChainId){
             require(IERC20(wToken).balanceOf(address(this)) >= amount,"balance too low");
-            IWToken(wToken).withdraw(outAmount);
-            to.transfer(outAmount);
+//            IWToken(wToken).withdraw(outAmount);
+//            to.transfer(outAmount);
+            TransferHelper.safeWithdraw(wToken,amount);
+            TransferHelper.safeTransferETH(to,amount);
             emit mapTransferIn(address(0), from, to, orderId, outAmount, fromChain, toChain);
         }else{
             emit mapTransferOut(address(0), from, to, orderId, outAmount, fromChain, toChain);
         }
     }
 
-    constructor(){
-        initialize(0x3CDF7A63f514092b42FFA697aC01D81d37A2F34d,0x0000000000000000000000000000000000000000);
-    }
+    //constructor(){
+        //initialize(0x3CDF7A63f514092b42FFA697aC01D81d37A2F34d,0x0000000000000000000000000000000000000000);
+    //}
 }

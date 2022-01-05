@@ -20,7 +20,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 
 
 module.exports = {
-  defaultNetwork: 'hardhat',
+  defaultNetwork: 'BscTest',
   abiExporter: {
     path: './abi',
     clear: false,
@@ -37,12 +37,15 @@ module.exports = {
       default: 0,
       1: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
       3: '0xf70949bc9b52deffcda63b0d15608d601e3a7c49',
+      56: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
+      97: '0xf984Ad9299B0102426a646aF72e2052a3A7eD0E2',
       22776: '0x13cb04d4a5dfb6398fc5ab005a6c84337256ee23',
     },
     mapcoin: {
       default: 0,
       1: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
-      3: '0x2020f4b99433067F4a5ED99Ce8392d94a8AC70d1',
+      3: '0x47f423C44976Fbe745588020b85B09A56458f9C0',
+      97: '0x624F96Ea37bBbEA15Df489f9083Fe786BAf15723',
       22776: '0x0000000000000000000000000000000000000000',
     },
     usdt: {
@@ -103,6 +106,12 @@ module.exports = {
     },
     Map: {
       url: `https://poc2-rpc.maplabs.io`,
+      chainId : 22776,
+      accounts: [PRIVATE_KEY]
+    },
+    MapTest: {
+      url: `https://poc2-rpc.maplabs.io`,
+      // url: `http://13.214.151.165:7445`,
       chainId : 22776,
       accounts: [PRIVATE_KEY]
     },

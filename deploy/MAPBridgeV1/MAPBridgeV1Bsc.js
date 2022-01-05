@@ -11,15 +11,15 @@ module.exports = async function ({ ethers, deployments}) {
 
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-  await deploy('MAPBridgeV1', {
+  await deploy('MAPBridgeV1Bsc', {
     from: deployer.address,
     args: [],
     log: true,
-    contract: 'MAPBridgeV1',
+    contract: 'MAPBridgeV1Bsc',
   })
-  let map = await ethers.getContract('MAPBridgeV1');
+  let map = await ethers.getContract('MAPBridgeV1Bsc');
 
-  console.log("MAPBridgeV1",map.address);
+  console.log("MAPBridgeV1Bsc",map.address);
 
 
   // await hre.run("verify:verify", {
@@ -68,4 +68,4 @@ module.exports = async function ({ ethers, deployments}) {
   console.log("TransparentUpgradeableProxy address:", TransparentUpgradeableProxy.address);
 }
 
-module.exports.tags = ['MAPBridgeV1']
+module.exports.tags = ['MAPBridgeV1Bsc']
