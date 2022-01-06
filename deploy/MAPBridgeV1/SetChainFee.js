@@ -16,7 +16,7 @@ module.exports = async function ({ ethers, deployments}) {
   let TransparentUpgradeableProxy = await ethers.getContract('TransparentUpgradeableProxy')
   console.log(TransparentUpgradeableProxy.address);
 
-  let bridge = await ethers.getContractAt("MAPBridgeV1Relay",TransparentUpgradeableProxy.address)
+  let bridge = await ethers.getContractAt("MAPBridgeRelayV1Only",TransparentUpgradeableProxy.address)
 
   await bridge.setChainFee('1','1500000000000000000000')
 
