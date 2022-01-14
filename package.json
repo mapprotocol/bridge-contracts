@@ -10,7 +10,8 @@
     "map:deploy:addmanager": "npx hardhat deploy --tags AddManager --network Map",
     "bsc:deploy:nftBridge": " npx hardhat deploy --tags BridgeNft --network BscTest",
     "bscmain:deploy:MapIdvCoin": "npx hardhat deploy --tags  TokenBsc  --network Bsc",
-    "bscmain:deploy:bridge": "npx hardhat deploy --tags MAPBridgeV1 --network Bsc"
+    "bscmain:deploy:bridge": "npx hardhat deploy --tags MAPBridgeV1 --network Bsc",
+    "bscmain:grant:bridge": "npx hardhat deploy --tags TestTokenGrant --network Bsc"
   },
   "repository": {
     "type": "git",
@@ -24,6 +25,7 @@
   "homepage": "https://github.com/mapprotocol/contracts#readme",
   "dependencies": {
     "@nomiclabs/hardhat-etherscan": "^2.1.8",
+    "ajv": "^8.8.2",
     "bignumber.js": "^9.0.1",
     "keythereum": "^1.2.0",
     "prompt-sync": "^4.2.0",

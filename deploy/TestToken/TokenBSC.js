@@ -15,7 +15,7 @@ module.exports = async function ({ ethers, deployments}) {
 
   await deploy('MintToken', {
     from: deployer.address,
-    args: ['Mapped Idavoll Network','IDV'],
+    args: ['Mapped Binance USD','BUSD'],
     log: true,
     contract: 'MintToken',
   })
@@ -26,7 +26,7 @@ module.exports = async function ({ ethers, deployments}) {
 
   await deploy('MintToken', {
     from: deployer.address,
-    args: ['MAP Protocol','MAP'],
+    args: ['Mapped BNB','BNB'],
     log: true,
     contract: 'MintToken',
   })
