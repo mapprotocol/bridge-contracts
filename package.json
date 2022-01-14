@@ -8,7 +8,9 @@
     "eth:deploy:bridge": "npx hardhat deploy --tags MAPBridgeV1 --network Eth",
     "bsc:deploy:bridge": "npx hardhat deploy --tags MAPBridgeV1 --network BscTest",
     "map:deploy:addmanager": "npx hardhat deploy --tags AddManager --network Map",
-    "bsc:deploy:nftBridge": " npx hardhat deploy --tags BridgeNft --network BscTest"
+    "bsc:deploy:nftBridge": " npx hardhat deploy --tags BridgeNft --network BscTest",
+    "bscmain:deploy:MapIdvCoin": "npx hardhat deploy --tags  TokenBsc  --network Bsc",
+    "bscmain:deploy:bridge": "npx hardhat deploy --tags MAPBridgeV1 --network Bsc"
   },
   "repository": {
     "type": "git",
