@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./MAPBridgeV1.sol";
+import "../MAPBridgeV1.sol";
 
 contract MAPBridgeRelayV1 is MAPBridgeV1 {
     using SafeMath for uint;

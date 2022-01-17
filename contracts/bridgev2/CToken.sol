@@ -17,6 +17,8 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 //    address correspond;
 //    IERC20 correspondToken;
 //    uint8 _decimals;
+//    string _name;
+//    string _symbol;
 //
 //
 //    function initialize(
@@ -24,7 +26,9 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 //        string memory name_,
 //        string memory symbol_,
 //        uint8 decimals_,
-//        address erc20) external ERC20(name_,symbol_){
+//        address erc20) external {
+//        _name = name_;
+//        _symbol = symbol_;
 //        correspond = correspond_;
 //        correspondToken = IERC20(correspond);
 //        _decimals = decimals_;
@@ -32,6 +36,14 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 //
 //    function decimals() public view virtual override returns (uint8) {
 //        return _decimals;
+//    }
+//
+//    function name() public view virtual override returns (string memory) {
+//        return _name;
+//    }
+//
+//    function symbol() public view virtual override returns (string memory) {
+//        return _symbol;
 //    }
 //
 //
@@ -62,6 +74,6 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 //        uint correspond = getCorrespondQuantity(amount);
 //        correspondToken.transfer(msg.sender,correspond);
 //    }
-//
-//
+
+
 //}
