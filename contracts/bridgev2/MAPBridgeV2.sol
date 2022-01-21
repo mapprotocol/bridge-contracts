@@ -48,7 +48,7 @@ contract Role is AccessControl{
 }
 
 
-contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
+contract MAPBridgeV2 is ReentrancyGuard,Role,Initializable{
     using SafeMath for uint;
     uint public nonce;
 
@@ -125,12 +125,11 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
         if (cFee > 0) {
             require(mapToken.balanceOf(msg.sender) >= cFee,"balance too low");
             chainGasFees = chainGasFees.add(cFee);
-//            mapToken.transferFrom(msg.sender, address(this), cFee);
             TransferHelper.safeTransferFrom(address(mapToken),msg.sender,address(this),cFee);
         }
     }
 
-    function transferOutTokenBurn(address token, address to, uint amount, uint toChainId) external virtual
+    function transferOutTokenBurn(address token, address to, uint amount, uint toChainId) external
     checkBalance(token,msg.sender,amount){
         IMAPToken(token).burnFrom(msg.sender, amount);
         collectChainFee(toChainId);
@@ -139,9 +138,8 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
     }
 
 
-    function transferOutToken(address token, address to, uint amount, uint toChainId) external virtual
+    function transferOutToken(address token, address to, uint amount, uint toChainId) external
     checkBalance(token,msg.sender,amount){
-//        IERC20(token).transferFrom(msg.sender, address(this), amount);
         TransferHelper.safeTransferFrom(token,msg.sender,address(this),amount);
         collectChainFee(toChainId);
         bytes32 orderId = getOrderID(token, msg.sender, to, amount, toChainId);
@@ -149,7 +147,7 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
     }
 
 
-    function transferOutNative(address to, uint amount, uint toChainId) external payable virtual {
+    function transferOutNative(address to, uint amount, uint toChainId) external payable  {
         require(msg.value >= amount, "value too low");
         IWToken(wToken).deposit{value : amount}();
         collectChainFee(toChainId);
@@ -159,22 +157,19 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
 
 
     function transferInToken(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external checkOrder(orderId) checkBalance(token, address(this), amount) nonReentrant virtual onlyManager{
-//        IERC20(token).transfer(to, amount);
+    external checkOrder(orderId) checkBalance(token, address(this), amount) nonReentrant onlyManager{
         TransferHelper.safeTransfer(token,to,amount);
         emit mapTransferIn(token, from, to, orderId, amount, fromChain, toChain);
     }
 
     function transferInTokenMint(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external checkOrder(orderId) nonReentrant virtual onlyManager{
+    external checkOrder(orderId) nonReentrant  onlyManager{
         IMAPToken(token).mint(to, amount);
         emit mapTransferIn(token, from, to, orderId, amount, fromChain, toChain);
     }
 
     function transferInNative(address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external checkOrder(orderId) checkBalance(wToken, address(this), amount) nonReentrant virtual onlyManager{
-//        IWToken(wToken).withdraw(amount);
-//        to.transfer(amount);
+    external checkOrder(orderId) checkBalance(wToken, address(this), amount) nonReentrant  onlyManager{
         TransferHelper.safeWithdraw(wToken,amount);
         TransferHelper.safeTransferETH(to,amount);
         emit mapTransferIn(address(0), from, to, orderId, amount, fromChain, toChain);

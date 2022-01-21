@@ -16,10 +16,10 @@ module.exports = async function ({ ethers, deployments}) {
   let TransparentUpgradeableProxy = await ethers.getContract('TransparentUpgradeableProxy')
   console.log(TransparentUpgradeableProxy.address);
 
-  let bridge = await ethers.getContractAt("MAPBridgeRelayV1Only",TransparentUpgradeableProxy.address)
+  let bridge = await ethers.getContractAt("MAPBridgeV1",TransparentUpgradeableProxy.address)
 
-  await bridge.setChainFee('1','1500000000000000000000')
-
+  await bridge.setChainFee('3','100000000000000000')
+  console.log(await bridge.chainGasFee('3'))
 }
 
 module.exports.tags = ['SetChainFee']

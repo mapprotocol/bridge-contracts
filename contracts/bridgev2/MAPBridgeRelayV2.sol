@@ -47,7 +47,7 @@ contract Role is AccessControl{
     }
 }
 
-contract MAPBridgeRelayV1Only is ReentrancyGuard,Role,Initializable{
+contract MAPBridgeRelayV2Only is ReentrancyGuard,Role,Initializable{
     using SafeMath for uint;
 
     uint public nonce;
