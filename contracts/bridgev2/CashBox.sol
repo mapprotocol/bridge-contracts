@@ -13,7 +13,7 @@ contract CashBox{
     }
 
 
-//    function staking()
+//    function mining()
 
 
 }
