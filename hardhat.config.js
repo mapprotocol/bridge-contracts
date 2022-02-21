@@ -34,6 +34,7 @@ module.exports = {
       3: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
       56: '0x038BCF8d2d48C084B661E3f2B3c514b4244B4D90',
       22776: '0x038BCF8d2d48C084B661E3f2B3c514b4244B4D90',
+      137: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
     },
     wcoin: {
       default: 0,
@@ -42,6 +43,7 @@ module.exports = {
       56: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
       97: '0xf984Ad9299B0102426a646aF72e2052a3A7eD0E2',
       22776: '0x13cb04d4a5dfb6398fc5ab005a6c84337256ee23',
+      137: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
     },
     mapcoin: {
       default: 0,
@@ -50,6 +52,7 @@ module.exports = {
       56: '0x8105ECe4ce08B6B6449539A5db23e23b973DfA8f',
       97: '0x624F96Ea37bBbEA15Df489f9083Fe786BAf15723',
       22776: '0x0000000000000000000000000000000000000000',
+      137: '0x659BC6aD25AEea579f3eA91086fDbc7ac0432Dc4',
     },
     usdt: {
       default: 0,
