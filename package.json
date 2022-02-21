@@ -11,7 +11,11 @@
     "bsc:deploy:nftBridge": " npx hardhat deploy --tags BridgeNft --network BscTest",
     "bscmain:deploy:MapIdvCoin": "npx hardhat deploy --tags  TokenBsc  --network Bsc",
     "bscmain:deploy:bridge": "npx hardhat deploy --tags MAPBridgeV1 --network Bsc",
-    "bscmain:grant:bridge": "npx hardhat deploy --tags TestTokenGrant --network Bsc"
+    "bscmain:grant:bridge": "npx hardhat deploy --tags TestTokenGrant --network Bsc",
+    "matic:deploy:token": "npx hardhat deploy --tags TokenMatic --network Matic",
+    "matic:deploy:bridge": "npx hardhat deploy --tags MAPBridgeV1 --network Matic",
+    "matic:grant:bridge": "npx hardhat deploy --tags TokenGrantMatic --network Matic",
+    "eth:upgrade:bridge": "npx hardhat deploy --tags BridgeUpgrade --network Eth"
   },
   "repository": {
     "type": "git",
