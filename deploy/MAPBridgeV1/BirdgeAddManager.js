@@ -12,9 +12,13 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments}) {
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
 
-  let mapbridge = await ethers.getContract('TransparentUpgradeableProxy');
+  let mapbridgeProxy = await ethers.getContract('TransparentUpgradeableProxy');
 
-  console.log("MAPBridgeV1",mapbridge.address);
+  console.log("mapbridgeProxy",mapbridgeProxy.address);
+
+  let mapbridge = await ethers.getContractAt("MAPBridgeV1",mapbridgeProxy.address);
+
+  console.log("Load MAPBridgeV1 for", mapbridgeProxy.address);
 
   let manager = "";
 
