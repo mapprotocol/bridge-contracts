@@ -28,6 +28,9 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Role {
         chainTokenGasFee[to][token] = gasFee(lowest,highest,proportion);
     }
 
+    function setTokenVault(address token,address tVault) external onlyManager{
+        tokenVault[token] = tVault;
+    }
 
     function getTokenFee(uint to, address token, uint amount) external view override returns (uint){
         gasFee memory gf =  chainTokenGasFee[to][token];
@@ -42,6 +45,10 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Role {
 
     function getChainNativeToken(uint chain) external view override returns(address token){
         return chainNativeToken[chain];
+    }
+
+    function getVaultToken(address token) external view override returns(address vault){
+        return tokenVault[token];
     }
 
 }

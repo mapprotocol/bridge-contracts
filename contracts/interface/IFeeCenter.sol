@@ -12,4 +12,5 @@ interface IFeeCenter {
 
     function getTokenFee(uint to, address token, uint amount) external view returns (uint fee);
     function getChainNativeToken(uint chain) external view returns(address token);
+    function getVaultToken(address token) external view returns(address vault);
 }

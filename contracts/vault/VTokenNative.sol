@@ -6,7 +6,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./VERC20.sol";
-
+import "../interface/IVault.sol";
 
 
 contract VTokenNative is VERC20{
@@ -40,13 +40,13 @@ contract VTokenNative is VERC20{
         return amount.mul(allCorrespond).div(allCToken);
     }
 
-    function staking() external payable{
+    function staking() external payable {
         require(msg.value > 0,"value is empty");
         uint ctoken = getCTokenQuantity(msg.value);
         _mint(msg.sender,ctoken);
     }
 
-    function withdraw(uint amount) external{
+    function withdraw(uint amount) external {
         _burn(msg.sender,amount);
         uint correspond = getCorrespondQuantity(amount);
         payable(address(msg.sender)).transfer(correspond);

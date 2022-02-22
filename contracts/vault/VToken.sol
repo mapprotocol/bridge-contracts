@@ -5,12 +5,13 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./VERC20.sol";
+import "../interface/IVault.sol";
 
 
-contract VToken is VERC20 {
+contract VToken is VERC20, IVault {
     using SafeMath for uint;
     uint accrualBlockNumber;
-    mapping(address => uint) UserStakingAmount;
+    mapping(address => uint) userStakingAmount;
 
     address correspond;
     IERC20 correspondToken;
@@ -41,19 +42,19 @@ contract VToken is VERC20 {
         return amount.mul(allCorrespond).div(allCToken);
     }
 
-    function staking(uint amount) external {
+    function staking(uint amount) external override {
         correspondToken.transferFrom(msg.sender, address(this), amount);
         uint ctoken = getCTokenQuantity(amount);
         _mint(msg.sender, ctoken);
     }
 
-    function stakingTo(uint amount, address to) external {
+    function stakingTo(uint amount, address to) external override{
         correspondToken.transferFrom(msg.sender, address(this), amount);
         uint ctoken = getCTokenQuantity(amount);
         _mint(to, ctoken);
     }
 
-    function withdraw(uint amount) external {
+    function withdraw(uint amount) external override {
         _burn(msg.sender, amount);
         uint correspondAmount = getCorrespondQuantity(amount);
         correspondToken.transfer(msg.sender, correspondAmount);
