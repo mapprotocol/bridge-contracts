@@ -35,6 +35,7 @@ module.exports = {
       56: '0x038BCF8d2d48C084B661E3f2B3c514b4244B4D90',
       22776: '0x038BCF8d2d48C084B661E3f2B3c514b4244B4D90',
       137: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
+      97: '0x289F8F063c4304F432bb96DD31e82bdCc5CcE142',
     },
     wcoin: {
       default: 0,
@@ -129,7 +130,8 @@ module.exports = {
     BscTest: {
       url: `https://data-seed-prebsc-2-s3.binance.org:8545/`,
       chainId : 97,
-      accounts: [PRIVATE_KEY]
+      accounts: [PRIVATE_KEY],
+      gasPrice: 11 * 1000000000
     },
     Abey: {
       url: `http://54.169.112.1:8545`,

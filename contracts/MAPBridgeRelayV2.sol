@@ -44,6 +44,8 @@ contract MAPBridgeRelayV2Only is ReentrancyGuard, Role, Initializable {
     event mapTransferIn(address indexed token, address indexed from, address indexed to,
         bytes32 orderId, uint amount, uint fromChain, uint toChain);
     event mapTokenRegister(bytes32 tokenID, address token);
+    event mapDepositIn(address indexed token, address indexed from, address indexed to,
+        bytes32 orderId, uint amount);
 
     function initialize(address _wToken, address _mapToken) public initializer {
         uint _chainId;
@@ -205,9 +207,9 @@ contract MAPBridgeRelayV2Only is ReentrancyGuard, Role, Initializable {
         address vaultTokenAddress = feeCenter.getVaultToken(token);
         require(vaultTokenAddress != address(0), "only vault token");
         IVault vaultToken = IVault(vaultTokenAddress);
-        vaultToken.stakingTo()
-
-        //emit mapDepositOut(token, from, to, orderId, amount);
+        IERC20(token).transfer(vaultTokenAddress,amount);
+        vaultToken.stakingTo(amount,to);
+        emit mapDepositIn(token, from, to, orderId, amount);
     }
 
     function setChainFee(uint chainId, uint fee) external onlyManager {

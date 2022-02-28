@@ -6,9 +6,10 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./VERC20.sol";
 import "../interface/IVault.sol";
+import "../utils/Role.sol";
 
 
-contract VToken is VERC20, IVault {
+contract VToken is VERC20, IVault, Role {
     using SafeMath for uint;
     uint accrualBlockNumber;
     mapping(address => uint) userStakingAmount;
@@ -48,8 +49,7 @@ contract VToken is VERC20, IVault {
         _mint(msg.sender, ctoken);
     }
 
-    function stakingTo(uint amount, address to) external override{
-        correspondToken.transferFrom(msg.sender, address(this), amount);
+    function stakingTo(uint amount, address to) external override onlyManager {
         uint ctoken = getCTokenQuantity(amount);
         _mint(to, ctoken);
     }
