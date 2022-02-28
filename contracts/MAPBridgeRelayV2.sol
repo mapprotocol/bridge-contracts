@@ -114,13 +114,13 @@ contract MAPBridgeRelayV2Only is ReentrancyGuard, Role, Initializable {
         }
     }
 
-    //    function collectChainFee(uint toChainId,uint native) internal{
-    //        uint cFee = chainGasFee[toChainId];
-    //        if (cFee > 0) {
-    //            require(msg.value >= cFee.add(native),"balance too low");
-    //            IWToken(wToken).deposit{value : msg.value.sub(native)}();
-    //        }
-    //    }
+//        function collectChainFee(uint toChainId,uint native) internal{
+//            uint cFee = chainGasFee[toChainId];
+//            if (cFee > 0) {
+//                require(msg.value >= cFee.add(native),"balance too low");
+//                IWToken(wToken).deposit{value : msg.value.sub(native)}();
+//            }
+//        }
 
 
     function collectChainFee(uint toChainId, address token, uint amount) internal returns (uint out){

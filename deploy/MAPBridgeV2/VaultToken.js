@@ -11,7 +11,16 @@ module.exports = async function ({ ethers, deployments}) {
 
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-   let mt = await ethers.getContract("MintToken")
+  await deploy('MintToken', {
+    from: deployer.address,
+    args: ['MintToken','MT'],
+    log: true,
+    contract: 'MintToken',
+  })
+
+  let mt = await ethers.getContract("MintToken")
+
+  await mt.mint(deployer.address,"10000000000000000000000000000000")
 
   await deploy('VToken', {
     from: deployer.address,
@@ -21,7 +30,16 @@ module.exports = async function ({ ethers, deployments}) {
   })
   let vtoken = await ethers.getContract('VToken');
 
-  await vtoken.initialize(mt.address,mt.name(),mt.symbol(),mt.decimals());
+  await mt.approve(vtoken.address,"100000000000000000000000000000000")
+
+
+
+  await vtoken.initialize(mt.address,"V"+ mt.name().toString(),"V"+ mt.symbol().toString(),mt.decimals());
+
+  await hre.run("verify:verify", {
+    address: vtoken.address,
+    constructorArguments:[]
+  });
 
   console.log("VToken",vtoken.address);
 

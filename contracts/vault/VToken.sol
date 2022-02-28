@@ -32,8 +32,8 @@ contract VToken is VERC20, IVault, Role {
     }
 
     function getCTokenQuantity(uint amount) public view returns (uint){
-        uint allCorrespond = correspondBalance();
-        uint allCToken = totalSupply();
+        uint allCorrespond = correspondBalance().add(amount);
+        uint allCToken = totalSupply().add(amount);
         return amount.mul(allCToken).div(allCorrespond);
     }
 
@@ -44,8 +44,8 @@ contract VToken is VERC20, IVault, Role {
     }
 
     function staking(uint amount) external override {
-        correspondToken.transferFrom(msg.sender, address(this), amount);
         uint ctoken = getCTokenQuantity(amount);
+        correspondToken.transferFrom(msg.sender, address(this), amount);
         _mint(msg.sender, ctoken);
     }
 
@@ -55,8 +55,8 @@ contract VToken is VERC20, IVault, Role {
     }
 
     function withdraw(uint amount) external override {
-        _burn(msg.sender, amount);
         uint correspondAmount = getCorrespondQuantity(amount);
+        _burn(msg.sender, amount);
         correspondToken.transfer(msg.sender, correspondAmount);
     }
 }

@@ -133,6 +133,12 @@ module.exports = {
       accounts: [PRIVATE_KEY],
       gasPrice: 11 * 1000000000
     },
+    BscTest2: {
+      url: `https://data-seed-prebsc-2-s3.binance.org:8545/`,
+      chainId : 97,
+      accounts: [PRIVATE_KEY],
+      gasPrice: 11 * 1000000000
+    },
     Abey: {
       url: `http://54.169.112.1:8545`,
       chainId : 179,

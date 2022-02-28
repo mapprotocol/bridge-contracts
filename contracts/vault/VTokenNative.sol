@@ -28,13 +28,13 @@ contract VTokenNative is VERC20{
         return payable(address(this)).balance;
     }
 
-    function getCTokenQuantity(uint amount) public view returns(uint){
-        uint allCorrespond = correspondBalance();
-        uint allCToken = totalSupply();
+    function getCTokenQuantity(uint amount) public view returns (uint){
+        uint allCorrespond = correspondBalance().add(amount);
+        uint allCToken = totalSupply().add(amount);
         return amount.mul(allCToken).div(allCorrespond);
     }
 
-    function getCorrespondQuantity(uint amount) public view returns(uint){
+    function getCorrespondQuantity(uint amount) public view returns (uint){
         uint allCorrespond = correspondBalance();
         uint allCToken = totalSupply();
         return amount.mul(allCorrespond).div(allCToken);
