@@ -35,7 +35,7 @@ module.exports = async function ({ ethers, deployments}) {
 
 
 
-  await MintToken.mint(deployer.address,'1000000000000000000000000')
+  MintToken.mint(deployer.address,'1000000000000000000000000')
 
 
   await deploy('MapToken', {
@@ -48,7 +48,7 @@ module.exports = async function ({ ethers, deployments}) {
 
   console.log("MapToken:",MapToken.address);
 
-  await MapToken.mint(deployer.address,'1000000000000000000000000')
+  MapToken.mint(deployer.address,'1000000000000000000000000')
 
 
   await deploy('EthToken', {
@@ -61,7 +61,7 @@ module.exports = async function ({ ethers, deployments}) {
 
   console.log("EthToken:",EthToken.address);
 
-  await EthToken.mint(deployer.address,'1000000000000000000000000')
+  EthToken.mint(deployer.address,'1000000000000000000000000')
 
 
   // await deploy('BscToken', {
@@ -78,4 +78,4 @@ module.exports = async function ({ ethers, deployments}) {
 
 }
 
-module.exports.tags = ['TestTokenBsc']
+module.exports.tags = ['TestTokenMatic']

@@ -9,7 +9,7 @@ describe("MAPBridgeV1", () => {
     this.deployer = deployer;
 
 
-    this.bridge = await ethers.getContractAt('MAPBridgeRelayV1Only','0x346544CdCDB4452993d90e86ABCeAB8bD1405b7a');
+    this.bridge = await ethers.getContractAt('MAPBridgeV1','0x2f6805ce0df4602cff45d1ae1aedc73e2f70114e');
     this.token = await ethers.getContract('StandardToken');
     this.usdt = await ethers.getContract("TetherToken");
     this.wtoken = await ethers.getContract("WrappedToken");
@@ -69,14 +69,14 @@ describe("MAPBridgeV1", () => {
         this.deployer.address,'100','0x84b58192d78af4b8e92894444016ae129640ce3e2d41a02ebfebc3df7dafa999','97','22776')
 
 
-    // console.log("transferInNative is ok")
-    // expect(await greeter.greet()).to.equal("Hello, world!");
-    //
-    // const setGreetingTx = await greeter.setGreeting("Hola, mundo!");
-    //
-    // // wait until the transaction is mined
-    // await setGreetingTx.wait();
-    //
-    // expect(await greeter.greet()).to.equal("Hola, mundo!");
+    console.log("transferInNative is ok")
+    expect(await greeter.greet()).to.equal("Hello, world!");
+
+    const setGreetingTx = await greeter.setGreeting("Hola, mundo!");
+
+    // wait until the transaction is mined
+    await setGreetingTx.wait();
+
+    expect(await greeter.greet()).to.equal("Hola, mundo!");
   });
 });

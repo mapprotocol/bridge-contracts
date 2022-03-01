@@ -6,10 +6,10 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./VERC20.sol";
+import "../interface/IVault.sol";
 
 
-
-contract CTokenNative is VERC20{
+contract VTokenNative is VERC20{
     using SafeMath for uint;
     uint accrualBlockNumber;
     address mainCoin = address (0);
@@ -28,25 +28,25 @@ contract CTokenNative is VERC20{
         return payable(address(this)).balance;
     }
 
-    function getCTokenQuantity(uint amount) public view returns(uint){
-        uint allCorrespond = correspondBalance();
-        uint allCToken = totalSupply();
+    function getCTokenQuantity(uint amount) public view returns (uint){
+        uint allCorrespond = correspondBalance().add(amount);
+        uint allCToken = totalSupply().add(amount);
         return amount.mul(allCToken).div(allCorrespond);
     }
 
-    function getCorrespondQuantity(uint amount) public view returns(uint){
+    function getCorrespondQuantity(uint amount) public view returns (uint){
         uint allCorrespond = correspondBalance();
         uint allCToken = totalSupply();
         return amount.mul(allCorrespond).div(allCToken);
     }
 
-    function stakeing() external payable{
+    function staking() external payable {
         require(msg.value > 0,"value is empty");
         uint ctoken = getCTokenQuantity(msg.value);
         _mint(msg.sender,ctoken);
     }
 
-    function withdraw(uint amount) external{
+    function withdraw(uint amount) external {
         _burn(msg.sender,amount);
         uint correspond = getCorrespondQuantity(amount);
         payable(address(msg.sender)).transfer(correspond);

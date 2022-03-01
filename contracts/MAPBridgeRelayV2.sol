@@ -9,45 +9,14 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "./interface/IWToken.sol";
+import "./interface/IMAPToken.sol";
+import "./interface/IFeeCenter.sol";
+import "./utils/Role.sol";
+import "./interface/IFeeCenter.sol";
+import "./interface/IVault.sol";
 
-
-interface IWToken {
-    function deposit() external payable;
-
-    function transfer(address to, uint value) external returns (bool);
-
-    function withdraw(uint) external;
-}
-
-
-interface IMAPToken {
-    function mint(address to, uint256 amount) external;
-
-    function burn(uint256 amount) external;
-
-    function burnFrom(address from, uint256 amount) external;
-}
-
-
-contract Role is AccessControl{
-    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
-
-    constructor(){
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(MANAGER_ROLE, msg.sender);
-    }
-
-    modifier onlyManager(){
-        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
-        _;
-    }
-
-    function addManager(address manager) external onlyRole(DEFAULT_ADMIN_ROLE){
-        _setupRole(MANAGER_ROLE, manager);
-    }
-}
-
-contract MAPBridgeRelayV2Only is ReentrancyGuard,Role,Initializable{
+contract MAPBridgeRelayV2Only is ReentrancyGuard, Role, Initializable {
     using SafeMath for uint;
 
     uint public nonce;
@@ -66,16 +35,19 @@ contract MAPBridgeRelayV2Only is ReentrancyGuard,Role,Initializable{
 
 
     uint public transferFee;    // tranfer fee for every token, one in a million
-    mapping (address => uint) public transferFeeList;
+    mapping(address => uint) public transferFeeList;
 
+    IFeeCenter feeCenter;
 
     event mapTransferOut(address indexed token, address indexed from, address indexed to,
         bytes32 orderId, uint amount, uint fromChain, uint toChain);
     event mapTransferIn(address indexed token, address indexed from, address indexed to,
         bytes32 orderId, uint amount, uint fromChain, uint toChain);
     event mapTokenRegister(bytes32 tokenID, address token);
+    event mapDepositIn(address indexed token, address indexed from, address indexed to,
+        bytes32 orderId, uint amount);
 
-    function initialize(address _wToken,address _mapToken) public initializer{
+    function initialize(address _wToken, address _mapToken) public initializer {
         uint _chainId;
         assembly {_chainId := chainid()}
         selfChainId = _chainId;
@@ -85,8 +57,8 @@ contract MAPBridgeRelayV2Only is ReentrancyGuard,Role,Initializable{
         _setupRole(MANAGER_ROLE, msg.sender);
     }
 
-    receive() external payable{
-        require(msg.sender == wToken,"only wToken");
+    receive() external payable {
+        require(msg.sender == wToken, "only wToken");
     }
 
 
@@ -96,8 +68,8 @@ contract MAPBridgeRelayV2Only is ReentrancyGuard,Role,Initializable{
         _;
     }
 
-    modifier checkBalance(address token, address sender,uint amount){
-        require(IERC20(token).balanceOf(sender) >= amount,"balance too low");
+    modifier checkBalance(address token, address sender, uint amount){
+        require(IERC20(token).balanceOf(sender) >= amount, "balance too low");
         _;
     }
 
@@ -113,7 +85,7 @@ contract MAPBridgeRelayV2Only is ReentrancyGuard,Role,Initializable{
         return keccak256(abi.encodePacked(nonce++, from, to, token, amount, selfChainId, toChainID));
     }
 
-    function register(address token, string memory name) public onlyManager{
+    function register(address token, string memory name) public onlyManager {
         bytes32 id;
         if (bytes(name).length > 0) {
             id = getTokenIdForName(name);
@@ -130,6 +102,10 @@ contract MAPBridgeRelayV2Only is ReentrancyGuard,Role,Initializable{
         transferFee = fee;
     }
 
+    function setFeeCenter(address fee) external onlyManager {
+        feeCenter = IFeeCenter(fee);
+    }
+
     function getAmountWithdraw(uint amount) public view returns (uint){
         if (transferFee == 0) {
             return amount;
@@ -138,19 +114,31 @@ contract MAPBridgeRelayV2Only is ReentrancyGuard,Role,Initializable{
         }
     }
 
-    function collectChainFee(uint toChainId,uint native) internal{
-        uint cFee = chainGasFee[toChainId];
+//        function collectChainFee(uint toChainId,uint native) internal{
+//            uint cFee = chainGasFee[toChainId];
+//            if (cFee > 0) {
+//                require(msg.value >= cFee.add(native),"balance too low");
+//                IWToken(wToken).deposit{value : msg.value.sub(native)}();
+//            }
+//        }
+
+
+    function collectChainFee(uint toChainId, address token, uint amount) internal returns (uint out){
+        uint cFee = feeCenter.getTokenFee(toChainId, token, amount);
         if (cFee > 0) {
-            require(msg.value >= cFee.add(native),"balance too low");
-            IWToken(wToken).deposit{value : msg.value.sub(native)}();
+            if (token == address(0)) {
+                payable(address(feeCenter)).transfer(cFee);
+            } else {
+                IERC20(token).transfer(address(feeCenter), cFee);
+            }
         }
+        return amount.sub(cFee);
     }
 
     function transferOutTokenBurn(address token, address to, uint amount, uint toChainId) external payable
-    checkBalance(token,msg.sender,amount)  {
-        TransferHelper.safeTransferFrom(token,msg.sender,address(this),amount);
-        collectChainFee(toChainId,0);
-        uint outAmount = getAmountWithdraw(amount);
+    checkBalance(token, msg.sender, amount) {
+        TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
+        uint outAmount = collectChainFee(toChainId, token, amount);
         transferFeeList[token] = transferFeeList[token].add(amount).sub(outAmount);
         IMAPToken(token).burn(outAmount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
@@ -159,19 +147,17 @@ contract MAPBridgeRelayV2Only is ReentrancyGuard,Role,Initializable{
 
 
     function transferOutToken(address token, address to, uint amount, uint toChainId) external payable
-    checkBalance(token,msg.sender,amount)  {
-        TransferHelper.safeTransferFrom(token,msg.sender,address(this),amount);
-        collectChainFee(toChainId,0);
-        uint outAmount = getAmountWithdraw(amount);
+    checkBalance(token, msg.sender, amount) {
+        TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
+        uint outAmount = collectChainFee(toChainId, token, amount);
         transferFeeList[token] = transferFeeList[token].add(amount).sub(outAmount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(token, msg.sender, to, orderId, outAmount, selfChainId, toChainId);
     }
 
-    function transferOutNative(address to, uint amount, uint toChainId) external payable{
+    function transferOutNative(address to, uint amount, uint toChainId) external payable {
         IWToken(wToken).deposit{value : amount}();
-        collectChainFee(toChainId,amount);
-        uint outAmount = getAmountWithdraw(amount);
+        uint outAmount = collectChainFee(toChainId, address(0), amount);
         transferFeeList[address(0)] = transferFeeList[address(0)].add(amount).sub(outAmount);
         bytes32 orderId = getOrderID(address(0), msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(address(0), msg.sender, to, orderId, outAmount, selfChainId, toChainId);
@@ -179,61 +165,71 @@ contract MAPBridgeRelayV2Only is ReentrancyGuard,Role,Initializable{
 
 
     function transferInToken(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external checkOrder(orderId) nonReentrant onlyManager{
-        uint outAmount = getAmountWithdraw(amount);
+    external checkOrder(orderId) nonReentrant onlyManager {
+        uint outAmount = collectChainFee(toChain, token, amount);
         if (toChain == selfChainId) {
-            require(IERC20(token).balanceOf(address(this)) >= amount,"balance too low");
-            TransferHelper.safeTransfer(token,to,amount);
+            require(IERC20(token).balanceOf(address(this)) >= amount, "balance too low");
+            TransferHelper.safeTransfer(token, to, amount);
             emit mapTransferIn(token, from, to, orderId, outAmount, fromChain, toChain);
-        }else{
+        } else {
             emit mapTransferOut(token, from, to, orderId, outAmount, fromChain, toChain);
         }
     }
 
     function transferInTokenMint(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external checkOrder(orderId) nonReentrant  onlyManager{
+    external checkOrder(orderId) nonReentrant onlyManager {
         IMAPToken(token).mint(address(this), amount);
-        uint outAmount = getAmountWithdraw(amount);
-        if (toChain == selfChainId){
-            TransferHelper.safeTransfer(token,to,amount);
+        uint outAmount = collectChainFee(toChain, token, amount);
+        if (toChain == selfChainId) {
+            TransferHelper.safeTransfer(token, to, amount);
             emit mapTransferIn(token, from, to, orderId, outAmount, fromChain, toChain);
-        }else{
+        } else {
             IMAPToken(token).burn(outAmount);
             emit mapTransferOut(token, from, to, orderId, outAmount, fromChain, toChain);
         }
     }
 
     function transferInNative(address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external checkOrder(orderId) nonReentrant onlyManager{
-        uint outAmount = getAmountWithdraw(amount);
-        if (toChain == selfChainId){
-            require(IERC20(wToken).balanceOf(address(this)) >= amount,"balance too low");
-            TransferHelper.safeWithdraw(wToken,amount);
-            TransferHelper.safeTransferETH(to,amount);
+    external checkOrder(orderId) nonReentrant onlyManager {
+        uint outAmount = collectChainFee(toChain, address(0), amount);
+        if (toChain == selfChainId) {
+            require(IERC20(wToken).balanceOf(address(this)) >= amount, "balance too low");
+            TransferHelper.safeWithdraw(wToken, amount);
+            TransferHelper.safeTransferETH(to, amount);
             emit mapTransferIn(address(0), from, to, orderId, outAmount, fromChain, toChain);
-        }else{
+        } else {
             emit mapTransferOut(address(0), from, to, orderId, outAmount, fromChain, toChain);
         }
     }
 
-    function setChainFee(uint chainId, uint fee) external  onlyManager{
+    function depositIn(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain)
+    external checkOrder(orderId) nonReentrant onlyManager {
+        address vaultTokenAddress = feeCenter.getVaultToken(token);
+        require(vaultTokenAddress != address(0), "only vault token");
+        IVault vaultToken = IVault(vaultTokenAddress);
+        IERC20(token).transfer(vaultTokenAddress,amount);
+        vaultToken.stakingTo(amount,to);
+        emit mapDepositIn(token, from, to, orderId, amount);
+    }
+
+    function setChainFee(uint chainId, uint fee) external onlyManager {
         chainGasFee[chainId] = fee;
     }
 
-    function withdraw(address token, address payable receiver,uint256 amount) public onlyManager{
-        if(token == address(0)){
+    function withdraw(address token, address payable receiver, uint256 amount) public onlyManager {
+        if (token == address(0)) {
             IWToken(wToken).withdraw(amount);
             receiver.transfer(amount);
-        }else{
-            IERC20(token).transfer(receiver,amount);
+        } else {
+            IERC20(token).transfer(receiver, amount);
         }
     }
 }
 
 
 library TransferHelper {
-    function safeWithdraw(address wtoken,uint value)internal{
-        (bool success, bytes memory data) = wtoken.call(abi.encodeWithSelector(0x2e1a7d4d,value));
+    function safeWithdraw(address wtoken, uint value) internal {
+        (bool success, bytes memory data) = wtoken.call(abi.encodeWithSelector(0x2e1a7d4d, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))), 'TransferHelper: WiTHDRAW_FAILED');
     }
 
@@ -256,7 +252,7 @@ library TransferHelper {
     }
 
     function safeTransferETH(address to, uint value) internal {
-        (bool success,) = to.call{value:value}(new bytes(0));
+        (bool success,) = to.call{value : value}(new bytes(0));
         require(success, 'TransferHelper: ETH_TRANSFER_FAILED');
     }
 }
