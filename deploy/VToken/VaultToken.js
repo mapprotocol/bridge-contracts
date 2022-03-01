@@ -20,6 +20,10 @@ module.exports = async function ({ ethers, deployments}) {
 
   let mt = await ethers.getContract("MintToken")
 
+  let name = await mt.name();
+  let symbol = await mt.symbol();
+
+
   await mt.mint(deployer.address,"10000000000000000000000000000000")
 
   await deploy('VToken', {
@@ -32,9 +36,7 @@ module.exports = async function ({ ethers, deployments}) {
 
   await mt.approve(vtoken.address,"100000000000000000000000000000000")
 
-
-
-  await vtoken.initialize(mt.address,"V"+ mt.name().toString(),"V"+ mt.symbol().toString(),mt.decimals());
+  await vtoken.initialize(mt.address,"V".concat(name),"V".concat(symbol),mt.decimals());
 
   await hre.run("verify:verify", {
     address: vtoken.address,

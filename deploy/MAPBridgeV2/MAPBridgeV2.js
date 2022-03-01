@@ -45,8 +45,20 @@ module.exports = async function ({ ethers, deployments}) {
   })
   let TransparentUpgradeableProxy = await ethers.getContract('TransparentUpgradeableProxy');
 
-
   console.log("TransparentUpgradeableProxy address:", TransparentUpgradeableProxy.address);
+
+  await deploy('FeeCenter', {
+    from: deployer.address,
+    args: [],
+    log: true,
+    contract: 'FeeCenter',
+  })
+
+  let FeeCenter = await ethers.getContract('FeeCenter');
+
+  let bridgeV2 = await ethers.getContractAt('MAPBridgeV2',TransparentUpgradeableProxy.address);
+
+  bridgeV2.setFeeCenter(FeeCenter.address);
 }
 
 module.exports.tags = ['MAPBridgeV2']
