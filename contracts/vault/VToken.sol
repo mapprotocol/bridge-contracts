@@ -32,8 +32,11 @@ contract VToken is VERC20, IVault, Role {
     }
 
     function getCTokenQuantity(uint amount) public view returns (uint){
-        uint allCorrespond = correspondBalance().add(amount);
-        uint allCToken = totalSupply().add(amount);
+        if (totalSupply() == 0){
+            return amount;
+        }
+        uint allCorrespond = correspondBalance();
+        uint allCToken = totalSupply();
         return amount.mul(allCToken).div(allCorrespond);
     }
 
