@@ -16,7 +16,8 @@
     "matic:deploy:bridge": "npx hardhat deploy --tags MAPBridgeV1 --network Matic",
     "matic:grantToken:bridge": "npx hardhat deploy --tags TokenGrantMatic --network Matic",
     "eth:upgrade:bridge": "npx hardhat deploy --tags BridgeUpgrade --network Eth",
-    "matic:grant:bridge":"npx hardhat deploy --tags BridgeAddManager --network Matic"
+    "matic:grant:bridge":"npx hardhat deploy --tags BridgeAddManager --network Matic",
+    "matic:deploy:relayer": "npx hardhat deploy --tags Relayer --network Matic"
   },
   "repository": {
     "type": "git",

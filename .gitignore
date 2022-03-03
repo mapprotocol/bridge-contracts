@@ -7,3 +7,7 @@ artifacts
 
 #goland files
 .idea
+
+#hardhat plugin
+abi
+deployments
