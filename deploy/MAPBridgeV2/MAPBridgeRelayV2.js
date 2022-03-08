@@ -11,15 +11,15 @@ module.exports = async function ({ ethers, deployments}) {
 
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-  await deploy('MAPBridgeV2', {
+  await deploy('MAPBridgeRelayV2', {
     from: deployer.address,
     args: [],
     log: true,
-    contract: 'MAPBridgeV2',
+    contract: 'MAPBridgeRelayV2',
   })
-  let map = await ethers.getContract('MAPBridgeV2');
+  let map = await ethers.getContract('MAPBridgeRelayV2');
 
-  console.log("MAPBridgeV2",map.address);
+  console.log("MAPBridgeRelayV2",map.address);
 
 
 
@@ -46,6 +46,21 @@ module.exports = async function ({ ethers, deployments}) {
   let TransparentUpgradeableProxy = await ethers.getContract('TransparentUpgradeableProxy');
 
   console.log("TransparentUpgradeableProxy address:", TransparentUpgradeableProxy.address);
+
+  await deploy('FeeCenter', {
+    from: deployer.address,
+    args: [],
+    log: true,
+    contract: 'FeeCenter',
+  })
+
+  let FeeCenter = await ethers.getContract('FeeCenter');
+
+  let bridgeV2 = await ethers.getContractAt('MAPBridgeRelayV2',TransparentUpgradeableProxy.address);
+
+  await bridgeV2.setFeeCenter(FeeCenter.address);
+
+  console.log("bridgev2 set fee center ok")
 }
 
-module.exports.tags = ['MAPBridgeV2']
+module.exports.tags = ['MAPBridgeRelayV2']

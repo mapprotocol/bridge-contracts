@@ -80,7 +80,7 @@ contract MAPBridgeV2 is ReentrancyGuard, Role, Initializable {
         }
     }
 
-    function checkAuthToken(address token) internal view returns(bool) {
+    function checkAuthToken(address token) public view returns(bool) {
         return authToken[token];
     }
 
