@@ -71,6 +71,10 @@ module.exports = {
       default: 0,
       22776: '0xeac6cfd6e9e2fa033d85b7abdb6b14fe8aa71f2a',
     },
+    mapAdmin: {
+      default: 0,
+      212: '0x626A8EEA7032bb8838363e4AE0a7F20937Ab306B',
+    },
   },
 
   networks: {
@@ -117,9 +121,9 @@ module.exports = {
       accounts: [PRIVATE_KEY]
     },
     MapTest: {
-      url: `https://poc2-rpc.maplabs.io`,
-      // url: `http://13.214.151.165:7445`,
-      chainId : 22776,
+      // url: `https://poc2-rpc.maplabs.io`,
+      url: `http://13.76.138.119:7445`,
+      chainId : 212,
       accounts: [PRIVATE_KEY]
     },
     Bsc: {
