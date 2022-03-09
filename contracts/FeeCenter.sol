@@ -21,13 +21,6 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Role {
     //id : 0 VToken  1:relayer
     mapping(uint => Rate) distributeRate;
 
-//    function
-
-    struct Rate{
-        address feeAddress;
-        uint rate;
-    }
-
 
     function setChainTokenGasFee(uint to, address token, uint lowest, uint highest,uint proportion) external onlyManager {
         chainTokenGasFee[to][token] = gasFee(lowest,highest,proportion);
@@ -54,7 +47,7 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Role {
 
     function doDistribute(address token,uint amount) external override{
         address vaultAddress = tokenVault[token];
-        require(vaultAddress == address(0), "vault not set");
+        require(vaultAddress != address(0), "vault not set");
 
         Rate memory vaultRate = distributeRate[0];
         uint vaultAmount = amount.mul(vaultRate.rate).div(10000);
@@ -63,6 +56,16 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Role {
         Rate memory relayerRate = distributeRate[1];
         uint relayerAmount = amount.mul(relayerRate.rate).div(10000);
         TransferHelper.safeTransfer(token,relayerRate.feeAddress,relayerAmount);
+    }
+
+    function getDistribute(uint id, address token) external view override returns(address feeAddress, uint rates){
+        Rate memory rate = distributeRate[id];
+        if (id == 0) {
+            address vaultAddress = tokenVault[token];
+            require(vaultAddress != address(0), "vault not set");
+            rate.feeAddress = vaultAddress;
+        }
+        return(rate.feeAddress, rate.rate);
     }
 
     function setDistributeRate(uint id, address to, uint rate) external onlyManager{

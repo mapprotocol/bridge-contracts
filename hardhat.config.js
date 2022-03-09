@@ -111,6 +111,11 @@ module.exports = {
       chainId : 3,
       accounts: [PRIVATE_KEY]
     },
+    Ropsten2: {
+      url: `https://ropsten.infura.io/v3/` + INFURA_KEY,
+      chainId : 3,
+      accounts: [PRIVATE_KEY]
+    },
     Map: {
       url: `https://poc2-rpc.maplabs.io`,
       chainId : 22776,
@@ -134,7 +139,7 @@ module.exports = {
       gasPrice: 11 * 1000000000
     },
     BscTest2: {
-      url: `https://data-seed-prebsc-2-s3.binance.org:8545/`,
+      url: `https://data-seed-prebsc-1-s1.binance.org:8545/`,
       chainId : 97,
       accounts: [PRIVATE_KEY],
       gasPrice: 11 * 1000000000

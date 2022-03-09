@@ -40,7 +40,7 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable {
 
     mapping(address => bool) public authToken;
 
-    IFeeCenter feeCenter;
+    IFeeCenter public feeCenter;
 
     event mapTransferOut(address indexed token, address indexed from, address indexed to,
         bytes32 orderId, uint amount, uint fromChain, uint toChain);
@@ -92,61 +92,75 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable {
         }
     }
 
-    function checkAuthToken(address token) internal view returns(bool) {
+    function checkAuthToken(address token) internal view returns (bool) {
         return authToken[token];
     }
 
-    function collectChainFee(uint toChainId, address token, uint amount) internal returns (uint out){
-        uint cFee = feeCenter.getTokenFee(toChainId, token, amount);
-        if (cFee > 0) {
-            if (token == address(0)) {
-                IERC20(wToken).transfer(address(feeCenter), cFee);
-                feeCenter.doDistribute(wToken,cFee);
-            } else {
-                IERC20(token).transfer(address(feeCenter), cFee);
-                feeCenter.doDistribute(token,cFee);
-            }
-        }
-        return amount.sub(cFee);
+    function getFeeValue(uint amount, uint rate) pure public returns (uint){
+        return amount.mul(rate).div(10000);
     }
 
-    function transferOut(address token, address to, uint amount, uint toChainId) external payable{
+    function collectChainFee(uint amount, address token) public {
+        address transferToken = token;
         if(token == address(0)){
+            transferToken = wToken;
+        }
+        if (amount > 0) {
+            (address feeToken,uint rate) = feeCenter.getDistribute(0, token);
+            uint out = getFeeValue(amount, rate);
+            TransferHelper.safeTransfer(transferToken, feeToken, out);
+
+            (feeToken, rate) = feeCenter.getDistribute(1, token);
+            out = getFeeValue(amount, rate);
+            TransferHelper.safeTransfer(transferToken, feeToken, out);
+        }
+    }
+
+
+    function getChainFee(uint toChainId, address token, uint amount) public view returns (uint out){
+        return feeCenter.getTokenFee(toChainId, token, amount);
+    }
+
+    function transferOut(address token, address to, uint amount, uint toChainId) external payable {
+        if (token == address(0)) {
+            require(msg.value >= amount, "value too low");
             IWToken(wToken).deposit{value : amount}();
-        }else{
+        } else {
+            require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
             TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
         }
-        uint outAmount = collectChainFee(toChainId, token, amount);
-        if (checkAuthToken(token)){
+        uint fee = getChainFee(toChainId, token, amount);
+        uint outAmount = amount.sub(fee);
+        if (checkAuthToken(token)) {
             IMAPToken(token).burn(outAmount);
         }
+
+        collectChainFee(fee,token);
+
         transferFeeList[address(0)] = transferFeeList[address(0)].add(amount).sub(outAmount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(token, msg.sender, to, orderId, outAmount, selfChainId, toChainId);
     }
 
     function transferIn(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external checkOrder(orderId) nonReentrant onlyManager{
-        if(toChain == selfChainId){
-            uint outAmount;
-            if(token == address(0)){
-                require(IERC20(wToken).balanceOf(address(this)) >= amount, "balance too low");
-                outAmount = collectChainFee(toChain, token, amount);
+    external checkOrder(orderId) nonReentrant onlyManager {
+        uint fee = getChainFee(toChain, token, amount);
+        uint outAmount = amount.sub(fee);
+        if (toChain == selfChainId) {
+            if (token == address(0)) {
                 TransferHelper.safeWithdraw(wToken, outAmount);
                 TransferHelper.safeTransferETH(to, outAmount);
-            }else if (checkAuthToken(token)){
+            } else if (checkAuthToken(token)) {
                 IMAPToken(token).mint(address(this), amount);
-                outAmount = collectChainFee(toChain, token, amount);
                 TransferHelper.safeTransfer(token, to, amount);
-            }else{
-                outAmount = collectChainFee(toChain, token, amount);
+            } else {
                 require(IERC20(token).balanceOf(address(this)) >= amount, "balance too low");
                 TransferHelper.safeTransfer(token, to, outAmount);
             }
+            collectChainFee(fee,token);
             emit mapTransferIn(address(0), from, to, orderId, outAmount, fromChain, toChain);
-        }else{
-            uint outAmount = collectChainFee(toChain, token, amount);
-            if (checkAuthToken(token)){
+        } else {
+            if (checkAuthToken(token)) {
                 IMAPToken(token).burn(outAmount);
             }
             emit mapTransferOut(token, from, to, orderId, outAmount, fromChain, toChain);
@@ -158,8 +172,8 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable {
         address vaultTokenAddress = feeCenter.getVaultToken(token);
         require(vaultTokenAddress != address(0), "only vault token");
         IVault vaultToken = IVault(vaultTokenAddress);
-        IERC20(token).transfer(vaultTokenAddress,amount);
-        vaultToken.stakingTo(amount,to);
+        IERC20(token).transfer(vaultTokenAddress, amount);
+        vaultToken.stakingTo(amount, to);
         emit mapDepositIn(token, from, to, orderId, amount);
     }
 
