@@ -36,6 +36,12 @@ interface IRelayer {
     function register() external payable;
 
     /**
+     * @dev set thte worker address on a current chainId, only relayer can call this function
+     *
+     */
+    function bind(address _worker) external;
+
+    /**
      * @dev set thte worker address on a specified chainId, only relayer can call this function
      *
      */
@@ -77,6 +83,7 @@ interface IRelayer {
      */
     function currentNumberAndHash(uint256 chainID)
         external
+        view
         returns (uint256 number, bytes memory hash);
 
     /**
