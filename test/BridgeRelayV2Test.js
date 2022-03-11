@@ -9,7 +9,7 @@ describe("MAPBridgeV2", () => {
     this.deployer = deployer;
 
     //this.bridge = await ethers.getContractAt('MAPBridgeV2','0xD431A84e344667236c461D166B95c345fe1A920A');
-    this.bridge = await ethers.getContractAt('MAPBridgeRelayV2','0x26D59ae240388494A7bFfbaf3ed77e7734f4be78');
+    this.bridge = await ethers.getContractAt('MAPBridgeRelayV2','0x9f7F4cE1ec629a770599cF66572ea473Cf9A2825');
     this.usdt = await ethers.getContract("TetherToken");
     this.mintToken = await ethers.getContract("MintToken");
 
@@ -43,6 +43,7 @@ describe("MAPBridgeV2", () => {
 
     await feeCenter.setTokenVault(this.usdt.address,"0x0000000000000000000000000000000000000003")
     await feeCenter.setTokenVault(this.mintToken.address,"0x0000000000000000000000000000000000000004")
+    await feeCenter.setTokenVault("0xf984Ad9299B0102426a646aF72e2052a3A7eD0E2","0x0000000000000000000000000000000000000005")
     console.log("feeCenter setTokenVault ok")
 
     // function setChainTokenGasFee(uint to, address token, uint lowest, uint highest,uint proportion)

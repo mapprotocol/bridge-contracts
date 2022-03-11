@@ -48,7 +48,7 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable {
         bytes32 orderId, uint amount, uint fromChain, uint toChain);
     event mapTokenRegister(bytes32 tokenID, address token);
     event mapDepositIn(address indexed token, address indexed from, address indexed to,
-        bytes32 orderId, uint amount);
+        bytes32 orderId, uint amount,uint fromChain);
 
     function initialize(address _wToken, address _mapToken) public initializer {
         uint _chainId;
@@ -118,6 +118,9 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable {
 
 
     function getChainFee(uint toChainId, address token, uint amount) public view returns (uint out){
+        if(token == address(0)){
+            token = wToken;
+        }
         return feeCenter.getTokenFee(toChainId, token, amount);
     }
 
@@ -174,7 +177,7 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable {
         IVault vaultToken = IVault(vaultTokenAddress);
         IERC20(token).transfer(vaultTokenAddress, amount);
         vaultToken.stakingTo(amount, to);
-        emit mapDepositIn(token, from, to, orderId, amount);
+        emit mapDepositIn(token, from, to, orderId, amount,fromChain);
     }
 
 
