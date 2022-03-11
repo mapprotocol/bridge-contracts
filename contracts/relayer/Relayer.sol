@@ -12,6 +12,7 @@ import "../interface/IRelayer.sol";
 interface IPreCompiledHeaderStore {
     function currentNumberAndHash(uint256 chainID)
         external
+        view
         returns (uint256 number, bytes memory hash);
 
     function save(
@@ -39,7 +40,7 @@ interface IPreCompiledTxVerify {
 contract Relayer is IRelayer, Initializable, Ownable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    IPreCompiledHeaderStore constant HeaderStore =
+    IPreCompiledHeaderStore constant HeaderStore = 
         IPreCompiledHeaderStore(0x000068656164657273746F726541646472657373);
     IPreCompiledTxVerify constant TxVerify =
         IPreCompiledTxVerify(0x0000000000747856657269667941646472657373);
@@ -92,7 +93,7 @@ contract Relayer is IRelayer, Initializable, Ownable {
             _chainId := chainid()
         }
 
-        bytes32 _worker = this.address2Bytes(msg.sender);
+        bytes32 _worker = address2Bytes(msg.sender);
         require(
             bindRelayer[_worker][_chainId] != address(0),
             "Relayer: caller is not worker"
@@ -109,7 +110,7 @@ contract Relayer is IRelayer, Initializable, Ownable {
     /** pure and view functions **********************************************************/
 
     function address2Bytes(address addr)
-        external
+        public
         pure
         override
         returns (bytes32)
@@ -119,7 +120,7 @@ contract Relayer is IRelayer, Initializable, Ownable {
     }
 
     function bytes2Address(bytes32 b32)
-        external
+        public
         pure
         override
         returns (address)
@@ -169,6 +170,26 @@ contract Relayer is IRelayer, Initializable, Ownable {
         _addRelayer(msg.sender, msg.value);
 
         emit Register(msg.sender, msg.value);
+    }
+
+    /**
+     * @dev  IRelayer.bind for self chain convience
+     */
+    function bind(address _worker) external override onlyRelayer {
+        bytes32 b32worker = address2Bytes(_worker);
+
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+
+        require(
+            bindRelayer[b32worker][chainId] == address(0),
+            "Relayer: worker already binded"
+        );
+
+        _setBindAddress(msg.sender, b32worker, chainId);
+        emit WorkerSet(msg.sender, chainId, b32worker);
     }
 
     /**
@@ -262,8 +283,8 @@ contract Relayer is IRelayer, Initializable, Ownable {
 
     function currentNumberAndHash(uint256 chainID)
         external
+        view
         override
-        onlyWorker
         returns (uint256 number, bytes memory hash)
     {
         (number, hash) = HeaderStore.currentNumberAndHash(chainID);
