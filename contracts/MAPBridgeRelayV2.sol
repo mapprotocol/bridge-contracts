@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "./interface/IWToken.sol";
 import "./interface/IMAPToken.sol";
 import "./interface/IFeeCenter.sol";
@@ -17,7 +18,7 @@ import "./interface/IFeeCenter.sol";
 import "./interface/IVault.sol";
 import "./utils/TransferHelper.sol";
 
-contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable {
+contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
     using SafeMath for uint;
 
     uint public nonce;
@@ -48,7 +49,7 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable {
         bytes32 orderId, uint amount, uint fromChain, uint toChain);
     event mapTokenRegister(bytes32 tokenID, address token);
     event mapDepositIn(address indexed token, address indexed from, address indexed to,
-        bytes32 orderId, uint amount,uint fromChain);
+        bytes32 orderId, uint amount, uint fromChain);
 
     function initialize(address _wToken, address _mapToken) public initializer {
         uint _chainId;
@@ -71,6 +72,13 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable {
         _;
     }
 
+    function setPause() external onlyManager {
+        _pause();
+    }
+
+    function setUnpause() external onlyManager {
+        _unpause();
+    }
 
     function getOrderID(address token, address from, address to, uint amount, uint toChainID) public returns (bytes32){
         return keccak256(abi.encodePacked(nonce++, from, to, token, amount, selfChainId, toChainID));
@@ -102,7 +110,7 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable {
 
     function collectChainFee(uint amount, address token) public {
         address transferToken = token;
-        if(token == address(0)){
+        if (token == address(0)) {
             transferToken = wToken;
         }
         if (amount > 0) {
@@ -118,35 +126,40 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable {
 
 
     function getChainFee(uint toChainId, address token, uint amount) public view returns (uint out){
-        if(token == address(0)){
+        if (token == address(0)) {
             token = wToken;
         }
         return feeCenter.getTokenFee(toChainId, token, amount);
     }
 
-    function transferOut(address token, address to, uint amount, uint toChainId) external payable {
-        if (token == address(0)) {
-            require(msg.value >= amount, "value too low");
-            IWToken(wToken).deposit{value : amount}();
-        } else {
-            require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
-            TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
-        }
+    function transferOut(address token, address to, uint amount, uint toChainId) external whenNotPaused {
+        require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
+        TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
         uint fee = getChainFee(toChainId, token, amount);
         uint outAmount = amount.sub(fee);
         if (checkAuthToken(token)) {
             IMAPToken(token).burn(outAmount);
         }
-
-        collectChainFee(fee,token);
-
+        collectChainFee(fee, token);
         transferFeeList[address(0)] = transferFeeList[address(0)].add(amount).sub(outAmount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(token, msg.sender, to, orderId, outAmount, selfChainId, toChainId);
     }
 
+    function transferOutNative(address to, uint toChainId) external payable whenNotPaused {
+        uint amount = msg.value;
+        require(amount > 0, "value too low");
+        IWToken(wToken).deposit{value : amount}();
+        uint fee = getChainFee(toChainId, address(0), amount);
+        uint outAmount = amount.sub(fee);
+        collectChainFee(fee, address(0));
+        transferFeeList[address(0)] = transferFeeList[address(0)].add(amount).sub(outAmount);
+        bytes32 orderId = getOrderID(address(0), msg.sender, to, outAmount, toChainId);
+        emit mapTransferOut(address(0), msg.sender, to, orderId, outAmount, selfChainId, toChainId);
+    }
+
     function transferIn(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external checkOrder(orderId) nonReentrant onlyManager {
+    external checkOrder(orderId) nonReentrant onlyManager whenNotPaused{
         uint fee = getChainFee(toChain, token, amount);
         uint outAmount = amount.sub(fee);
         if (toChain == selfChainId) {
@@ -160,7 +173,7 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable {
                 require(IERC20(token).balanceOf(address(this)) >= amount, "balance too low");
                 TransferHelper.safeTransfer(token, to, outAmount);
             }
-            collectChainFee(fee,token);
+            collectChainFee(fee, token);
             emit mapTransferIn(address(0), from, to, orderId, outAmount, fromChain, toChain);
         } else {
             if (checkAuthToken(token)) {
@@ -171,13 +184,17 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable {
     }
 
     function depositIn(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain)
-    external checkOrder(orderId) nonReentrant onlyManager {
+    external payable checkOrder(orderId) nonReentrant onlyManager whenNotPaused{
+        if (token == address(0)){
+            IWToken(wToken).deposit{value : amount}();
+            token == wToken;
+        }
         address vaultTokenAddress = feeCenter.getVaultToken(token);
         require(vaultTokenAddress != address(0), "only vault token");
         IVault vaultToken = IVault(vaultTokenAddress);
         IERC20(token).transfer(vaultTokenAddress, amount);
         vaultToken.stakingTo(amount, to);
-        emit mapDepositIn(token, from, to, orderId, amount,fromChain);
+        emit mapDepositIn(token, from, to, orderId, amount, fromChain);
     }
 
 

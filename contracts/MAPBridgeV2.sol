@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "./interface/IWToken.sol";
 import "./interface/IMAPToken.sol";
 import "./interface/IFeeCenter.sol";
@@ -15,8 +16,7 @@ import "./utils/Role.sol";
 import "./interface/IFeeCenter.sol";
 import "./utils/TransferHelper.sol";
 
-
-contract MAPBridgeV2 is ReentrancyGuard, Role, Initializable {
+contract MAPBridgeV2 is ReentrancyGuard, Role, Initializable,Pausable {
     using SafeMath for uint;
     uint public nonce;
 
@@ -64,6 +64,14 @@ contract MAPBridgeV2 is ReentrancyGuard, Role, Initializable {
         _;
     }
 
+    function setPause() external onlyManager{
+        _pause();
+    }
+
+    function setUnpause() external onlyManager{
+        _unpause();
+    }
+
     function getOrderID(address token, address from, address to, uint amount, uint toChainID) public returns (bytes32){
         return keccak256(abi.encodePacked(nonce++, from, to, token, amount, selfChainId, toChainID));
     }
@@ -80,52 +88,59 @@ contract MAPBridgeV2 is ReentrancyGuard, Role, Initializable {
         }
     }
 
-    function checkAuthToken(address token) public view returns(bool) {
+    function checkAuthToken(address token) public view returns (bool) {
         return authToken[token];
     }
 
 
-    function transferOut(address token, address to, uint amount, uint toChainId) external payable{
+    function transferOut(address token, address to, uint amount, uint toChainId) external whenNotPaused{
         bytes32 orderId = getOrderID(token, msg.sender, to, amount, toChainId);
-        if (token == address(0)){
-            require(msg.value >= amount, "value too low");
-            IWToken(wToken).deposit{value : amount}();
-        }else{
-            require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
-            if(checkAuthToken(token)){
-                IMAPToken(token).burnFrom(msg.sender, amount);
-            }else{
-                TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
-            }
+        require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
+        if (checkAuthToken(token)) {
+            IMAPToken(token).burnFrom(msg.sender, amount);
+        } else {
+            TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
         }
         emit mapTransferOut(token, msg.sender, to, orderId, amount, selfChainId, toChainId);
     }
 
+    function transferOutNative(address to, uint toChainId) external payable whenNotPaused {
+        uint amount = msg.value;
+        require(amount > 0, "balance is zero");
+        bytes32 orderId = getOrderID(address(0), msg.sender, to, amount, toChainId);
+        IWToken(wToken).deposit{value : amount}();
+        emit mapTransferOut(address(0), msg.sender, to, orderId, amount, selfChainId, toChainId);
+    }
 
-    function depositOut(address token, address from, address to, uint amount) external payable {
+
+    function depositOut(address token, address from, address to, uint amount) external payable whenNotPaused{
         bytes32 orderId = getOrderID(token, msg.sender, to, amount, 22776);
-        if (token == address(0)) {
-            require(msg.value >= amount, "balance too low");
-        } else {
-            require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
-            TransferHelper.safeTransferFrom(token, from, to, amount);
-        }
+        require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
+        TransferHelper.safeTransferFrom(token, from, to, amount);
         emit mapDepositOut(token, from, to, orderId, amount);
     }
 
+    function depositOutNative(address from, address to) external payable whenNotPaused{
+        uint amount = msg.value;
+        bytes32 orderId = getOrderID(address(0), msg.sender, to, amount, 22776);
+        require(msg.value >= amount, "balance too low");
+        emit mapDepositOut(address(0), from, to, orderId, amount);
+    }
+
+
     function transferIn(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
-    external checkOrder(orderId) nonReentrant onlyManager {
+    external checkOrder(orderId) nonReentrant onlyManager whenNotPaused {
         if (token == address(0)) {
             TransferHelper.safeWithdraw(wToken, amount);
             TransferHelper.safeTransferETH(to, amount);
-        }else if (checkAuthToken(token)){
+        } else if (checkAuthToken(token)) {
             IMAPToken(token).mint(to, amount);
-        }else{
+        } else {
             TransferHelper.safeTransfer(token, to, amount);
         }
-
         emit mapTransferIn(address(0), from, to, orderId, amount, fromChain, toChain);
     }
+
 
     function withdraw(address token, address payable receiver, uint256 amount) public onlyManager {
         if (token == address(0)) {
