@@ -37,17 +37,17 @@ module.exports = async function ({ ethers, deployments}) {
   symbol = "VMT"
 
 
-  await deploy('VToken', {
+  await deploy('VToken2', {
     from: deployer.address,
     args: [],
     log: true,
-    contract: 'VToken1',
+    contract: 'VToken2',
   })
-  let VMT = await ethers.getContract('VToken1');
+  let VMT = await ethers.getContract('VToken2');
 
   VMT.initialize(this.token.address,name,symbol,18);
 
   console.log("VMT:",VMT.address);
 }
 
-module.exports.tags = ['VToken']
+module.exports.tags = ['VaultToken']
