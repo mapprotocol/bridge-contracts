@@ -41,6 +41,8 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
 
     mapping(address => bool) public authToken;
 
+    mapping(uint => mapping(address =>uint)) vaultBalance;
+
     IFeeCenter public feeCenter;
 
     event mapTransferOut(address indexed token, address indexed from, address indexed to,
@@ -124,6 +126,11 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
         }
     }
 
+    function setVaultValue(uint amount,uint fromChain,uint toChain,address token)internal {
+        vaultBalance[fromChain][token] += amount;
+        vaultBalance[toChain][token] -=amount;
+    }
+
 
     function getChainFee(uint toChainId, address token, uint amount) public view returns (uint out){
         if (token == address(0)) {
@@ -141,8 +148,9 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
             IMAPToken(token).burn(outAmount);
         }
         collectChainFee(fee, token);
-        transferFeeList[address(0)] = transferFeeList[address(0)].add(amount).sub(outAmount);
+        transferFeeList[token] = transferFeeList[token].add(amount).sub(outAmount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
+        setVaultValue(amount,selfChainId,toChainId,token);
         emit mapTransferOut(token, msg.sender, to, orderId, outAmount, selfChainId, toChainId);
     }
 
@@ -155,6 +163,7 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
         collectChainFee(fee, address(0));
         transferFeeList[address(0)] = transferFeeList[address(0)].add(amount).sub(outAmount);
         bytes32 orderId = getOrderID(address(0), msg.sender, to, outAmount, toChainId);
+        setVaultValue(amount,selfChainId,toChainId,address(0));
         emit mapTransferOut(address(0), msg.sender, to, orderId, outAmount, selfChainId, toChainId);
     }
 
@@ -181,6 +190,7 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
             }
             emit mapTransferOut(token, from, to, orderId, outAmount, fromChain, toChain);
         }
+        setVaultValue(amount,fromChain,toChain,token);
     }
 
     function depositIn(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain)
@@ -194,6 +204,7 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
         IVault vaultToken = IVault(vaultTokenAddress);
         IERC20(token).transfer(vaultTokenAddress, amount);
         vaultToken.stakingTo(amount, to);
+        vaultBalance[fromChain][token]+=amount;
         emit mapDepositIn(token, from, to, orderId, amount, fromChain);
     }
 
