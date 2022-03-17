@@ -9,7 +9,7 @@ describe("MAPBridgeV2", () => {
     this.deployer = deployer;
 
 
-    this.bridge = await ethers.getContractAt('MAPBridgeV2','0xD431A84e344667236c461D166B95c345fe1A920A');
+    this.bridge = await ethers.getContract('MAPBridgeV2');
     // this.bridge = await ethers.getContractAt('MAPBridgeRelayV2','0xf3C3788FDa2470A32628a5EcFcD594d8f352438c');
     this.usdt = await ethers.getContract("TetherToken");
     this.mintToken = await ethers.getContract("MintToken");
@@ -40,7 +40,7 @@ describe("MAPBridgeV2", () => {
     console.log("transferOutToken is ok")
     await this.bridge.transferOut(this.mintToken.address,this.deployer.address,amount,1)
     console.log("transferOutTokenBurn is ok")
-    await this.bridge.transferOut("0x0000000000000000000000000000000000000000",this.deployer.address,1000,22776,{value:"1000"})
+    await this.bridge.transferOutNative(this.deployer.address,22776,{value:"1000"})
     console.log("transferOutNative is ok")
 
 

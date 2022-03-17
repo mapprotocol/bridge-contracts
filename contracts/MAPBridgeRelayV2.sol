@@ -41,7 +41,7 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
 
     mapping(address => bool) public authToken;
 
-    mapping(uint => mapping(address =>uint)) vaultBalance;
+    mapping(uint => mapping(address =>uint)) public vaultBalance;
 
     IFeeCenter public feeCenter;
 
@@ -72,6 +72,10 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
         require(!orderList[orderId], "order exist");
         orderList[orderId] = true;
         _;
+    }
+
+    function setVaultBalance(uint tochain, address token, uint amount) external onlyManager{
+        vaultBalance[tochain][token] = amount;
     }
 
     function setPause() external onlyManager {
@@ -115,18 +119,25 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
         if (token == address(0)) {
             transferToken = wToken;
         }
+        uint remaining = amount;
         if (amount > 0) {
             (address feeToken,uint rate) = feeCenter.getDistribute(0, token);
             uint out = getFeeValue(amount, rate);
-            TransferHelper.safeTransfer(transferToken, feeToken, out);
-
+            if (feeToken != address(0)){
+                TransferHelper.safeTransfer(transferToken, feeToken, out);
+                remaining -= out;
+            }
             (feeToken, rate) = feeCenter.getDistribute(1, token);
             out = getFeeValue(amount, rate);
             TransferHelper.safeTransfer(transferToken, feeToken, out);
+            remaining -=out;
+            if (remaining > 0){
+                TransferHelper.safeTransfer(transferToken, address(feeCenter), remaining);
+            }
         }
     }
 
-    function setVaultValue(uint amount,uint fromChain,uint toChain,address token)internal {
+    function setVaultValue(uint amount,uint fromChain,uint toChain,address token) internal {
         vaultBalance[fromChain][token] += amount;
         vaultBalance[toChain][token] -=amount;
     }

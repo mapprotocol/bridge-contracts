@@ -120,6 +120,11 @@ module.exports = {
       chainId : 22776,
       accounts: [PRIVATE_KEY]
     },
+    Map2: {
+      url: `https://poc2-rpc.maplabs.io`,
+      chainId : 22776,
+      accounts: [PRIVATE_KEY]
+    },
     MapTest: {
       // url: `https://poc2-rpc.maplabs.io`,
       url: `http://13.76.138.119:7445`,

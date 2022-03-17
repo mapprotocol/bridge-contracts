@@ -62,7 +62,6 @@ contract FeeCenter is IFeeCenter, AccessControl, Initializable,Role {
         Rate memory rate = distributeRate[id];
         if (id == 0) {
             address vaultAddress = tokenVault[token];
-            require(vaultAddress != address(0), "vault not set");
             rate.feeAddress = vaultAddress;
         }
         return(rate.feeAddress, rate.rate);
