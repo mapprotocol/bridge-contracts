@@ -17,6 +17,10 @@ contract VToken is VERC20, IVault, Role {
     address correspond;
     IERC20 correspondToken;
 
+
+    event VaultStaking(uint correspondAmount, uint vAmount);
+    event VaultWithdraw(uint correspondAmount, uint vAmount);
+
     function initialize(
         address correspond_,
         string memory name_,
@@ -50,16 +54,19 @@ contract VToken is VERC20, IVault, Role {
         uint ctoken = getCTokenQuantity(amount);
         correspondToken.transferFrom(msg.sender, address(this), amount);
         _mint(msg.sender, ctoken);
+        emit VaultStaking(amount,ctoken);
     }
 
     function stakingTo(uint amount, address to) external override onlyManager {
         uint ctoken = getCTokenQuantity(amount);
         _mint(to, ctoken);
+        emit VaultStaking(amount,ctoken);
     }
 
     function withdraw(uint amount) external override {
         uint correspondAmount = getCorrespondQuantity(amount);
         _burn(msg.sender, amount);
         correspondToken.transfer(msg.sender, correspondAmount);
+        emit VaultWithdraw(correspondAmount,amount);
     }
 }

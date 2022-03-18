@@ -61,8 +61,6 @@ contract MasterChef is Ownable {
     uint256 public bonusEndBlock;
     // SUSHI tokens created per block.
     uint256 public sushiPerBlock;
-    // Bonus muliplier for early sushi makers.
-    uint256 public constant BONUS_MULTIPLIER = 1;
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
     IMigratorChef public migrator;
     // Info of each pool.
@@ -84,13 +82,11 @@ contract MasterChef is Ownable {
 
     constructor(
         address _sushi,
-        address _devaddr,
         uint256 _sushiPerBlock,
         uint256 _startBlock,
         uint256 _bonusEndBlock
     ) {
         sushi = IERC20(_sushi);
-        devaddr = _devaddr;
         sushiPerBlock = _sushiPerBlock;
         bonusEndBlock = _bonusEndBlock;
         startBlock = _startBlock;
@@ -162,12 +158,12 @@ contract MasterChef is Ownable {
     returns (uint256)
     {
         if (_to <= bonusEndBlock) {
-            return _to.sub(_from).mul(BONUS_MULTIPLIER);
+            return _to.sub(_from);
         } else if (_from >= bonusEndBlock) {
             return _to.sub(_from);
         } else {
             return
-            bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
+            bonusEndBlock.sub(_from).add(
                 _to.sub(bonusEndBlock)
             );
         }
@@ -227,6 +223,26 @@ contract MasterChef is Ownable {
         pool.lastRewardBlock = block.number;
     }
 
+
+    // Deposit LP tokens to MasterChef for SUSHI allocation.
+    function deposit(uint256 _pid, uint256 _amount) public {
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+        updatePool(_pid);
+        if (user.amount > 0) {
+            uint256 pending = user.amount.mul(pool.accCakePerShare).div(1e12).sub(user.rewardDebt);
+            if(pending > 0) {
+                safeCakeTransfer(msg.sender, pending);
+            }
+        }
+        if (_amount > 0) {
+            pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
+            user.amount = user.amount.add(_amount);
+        }
+        user.rewardDebt = user.amount.mul(pool.accCakePerShare).div(1e12);
+        emit Deposit(msg.sender, _pid, _amount);
+    }
+
     // Deposit LP tokens to MasterChef for SUSHI allocation.
     function deposit(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
@@ -255,56 +271,20 @@ contract MasterChef is Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
-        updatePool(_pid);
-        uint256 pending =
-        user.amount.mul(pool.accSushiPerShare).div(1e12).sub(
-            user.rewardDebt
-        );
-        safeSushiTransfer(msg.sender, pending);
-        user.amount = user.amount.sub(_amount);
-        user.rewardDebt = user.amount.mul(pool.accSushiPerShare).div(1e12);
-        pool.lpToken.safeTransfer(address(msg.sender), _amount);
-        lpAmount[_pid] -= _amount;
-        emit Withdraw(msg.sender, _pid, _amount);
-    }
 
-    // Stake CAKE tokens to MasterChef
-    function enterStaking(uint256 _pid,uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
-        if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accSushiPerShare).div(1e12).sub(user.rewardDebt);
-            if(pending > 0) {
-                safeSushiTransfer(msg.sender, pending);
-            }
-        }
-        if(_amount > 0) {
-            pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-            user.amount = user.amount.add(_amount);
-        }
-        user.rewardDebt = user.amount.mul(pool.accSushiPerShare).div(1e12);
-
-        emit Deposit(msg.sender, _pid, _amount);
-    }
-
-    // Withdraw CAKE tokens from STAKING.
-    function leaveStaking(uint256 _pid,uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-        require(user.amount >= _amount, "withdraw: not good");
-        updatePool(_pid);
-        uint256 pending = user.amount.mul(pool.accSushiPerShare).div(1e12).sub(user.rewardDebt);
+        uint256 pending = user.amount.mul(pool.accCakePerShare).div(1e12).sub(user.rewardDebt);
         if(pending > 0) {
-            safeSushiTransfer(msg.sender, pending);
+            safeCakeTransfer(msg.sender, pending);
         }
         if(_amount > 0) {
             user.amount = user.amount.sub(_amount);
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
         }
-        user.rewardDebt = user.amount.mul(pool.accSushiPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accCakePerShare).div(1e12);
         emit Withdraw(msg.sender, _pid, _amount);
     }
+
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
     function emergencyWithdraw(uint256 _pid) public {
@@ -324,12 +304,6 @@ contract MasterChef is Ownable {
         } else {
             sushi.transfer(_to, _amount);
         }
-    }
-
-    // Update dev address by the previous dev.
-    function dev(address _devaddr) public {
-        require(msg.sender == devaddr, "dev: wut?");
-        devaddr = _devaddr;
     }
 
     function withdrawToken(address _to, uint256 _amount) public onlyOwner{
