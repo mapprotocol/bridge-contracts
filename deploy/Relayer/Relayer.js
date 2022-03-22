@@ -26,7 +26,8 @@ module.exports = async function ({ ethers, deployments}) {
 
   console.log("ProxyAdmin", proxyAdmin.address);
 
-  const minStakeAmount = ethers.utils.parseEther(`100000`);
+  // for test purpose
+  const minStakeAmount = ethers.utils.parseEther(`100`);
 
   const relayerContract = await ethers.getContractAt(relayer.abi, relayer.address);
   const data = relayerContract.interface.encodeFunctionData('initialize',[minStakeAmount]);

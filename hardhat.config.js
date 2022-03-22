@@ -70,11 +70,7 @@ module.exports = {
     idv: {
       default: 0,
       22776: '0xeac6cfd6e9e2fa033d85b7abdb6b14fe8aa71f2a',
-    },
-    mapAdmin: {
-      default: 0,
-      212: '0x626A8EEA7032bb8838363e4AE0a7F20937Ab306B',
-    },
+    }
   },
 
   networks: {
