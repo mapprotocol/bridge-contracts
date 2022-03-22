@@ -26,6 +26,10 @@ describe("MAPBridgeV2", () => {
     console.log("vusdt:",this.vusdt.address)
     console.log("vmt:",this.vmt.address);
 
+    // await this.bridge.setVaultBalance(1,this.usdt.address,"10000000000");
+    // await this.bridge.setVaultBalance(97,this.usdt.address,"10000000000");
+    // await this.bridge.setVaultBalance(22776,this.usdt.address,"10000000000");
+
     let amount = '1000000';
     let amountIn = '10000000';
 

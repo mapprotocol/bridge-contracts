@@ -111,7 +111,7 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
     }
 
     function getFeeValue(uint amount, uint rate) pure public returns (uint){
-        return amount.mul(rate).div(10000);
+        return amount.mul(rate).div(1000000);
     }
 
     function collectChainFee(uint amount, address token) public {
@@ -213,7 +213,11 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
         address vaultTokenAddress = feeCenter.getVaultToken(token);
         require(vaultTokenAddress != address(0), "only vault token");
         IVault vaultToken = IVault(vaultTokenAddress);
-        IERC20(token).transfer(vaultTokenAddress, amount);
+        if (checkAuthToken(token)){
+            IMAPToken(token).mint(vaultTokenAddress,amount);
+        }else{
+            IERC20(token).transfer(vaultTokenAddress, amount);
+        }
         vaultToken.stakingTo(amount, to);
         vaultBalance[fromChain][token]+=amount;
         emit mapDepositIn(token, from, to, orderId, amount, fromChain);
