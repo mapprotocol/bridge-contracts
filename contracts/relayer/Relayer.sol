@@ -107,6 +107,9 @@ contract Relayer is IRelayer, Initializable, Ownable {
         _transferOwnership(msg.sender);
     }
 
+    constructor() initializer {
+    }
+
     /** pure and view functions **********************************************************/
 
     function address2Bytes(address addr)

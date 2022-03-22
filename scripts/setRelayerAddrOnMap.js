@@ -1,12 +1,14 @@
 
 async function main() {
 
-  const RelayerAddr = '0xB864eEe844698de06Dd305CBf729fDD765d9592D';
+
+  const tpuProxy = await ethers.getContract('TransparentUpgradeableProxy')
+  console.log("TransparentUpgradeableProxy address:", tpuProxy.address);
 
   // pre-compiled
   const EvmLiteAddr = '0x000068656164657273746F726541646472657373';
 
-  const { mapAdmin } = await ethers.getNamedSigners()
+  const [ mapAdmin ] = await ethers.getSigners()
 
   console.log('mapAdmin:', mapAdmin.address);
 
@@ -18,7 +20,7 @@ async function main() {
 
   const liteNode = await ethers.getContractAt(cAbi, EvmLiteAddr);
 
-  const tx = await liteNode.connect(mapAdmin).setRelayer(RelayerAddr);
+  const tx = await liteNode.connect(mapAdmin).setRelayer(tpuProxy.address);
   console.log('tx hash:', tx.hash);
 
   const receipt = await tx.wait()
