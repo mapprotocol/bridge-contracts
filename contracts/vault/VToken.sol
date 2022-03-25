@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./VERC20.sol";
 import "../interface/IVault.sol";
 import "../utils/Role.sol";
+import "../utils/TransferHelper.sol";
 
 
 contract VToken is VERC20, IVault, Role {
@@ -14,7 +15,7 @@ contract VToken is VERC20, IVault, Role {
     uint accrualBlockNumber;
     mapping(address => uint) public userStakingAmount;
 
-    address correspond;
+    address public correspond;
     IERC20 correspondToken;
 
     event VaultStaking(uint correspondAmount, uint vAmount);
@@ -54,7 +55,7 @@ contract VToken is VERC20, IVault, Role {
 
     function staking(uint amount) external override {
         uint vtoken = getVTokenQuantity(amount);
-        correspondToken.transferFrom(msg.sender, address(this), amount);
+        TransferHelper.safeTransferFrom(correspond,msg.sender,address(this),amount);
         _mint(msg.sender, vtoken);
         emit VaultStaking(amount,vtoken);
     }
@@ -69,7 +70,7 @@ contract VToken is VERC20, IVault, Role {
         uint correspondAmount = getCorrespondQuantity(amount);
         require(correspondBalance().sub(correspondAmount) >0,"take too much");
         _burn(msg.sender, amount);
-        correspondToken.transfer(msg.sender, correspondAmount);
+        TransferHelper.safeTransferFrom(correspond,msg.sender,address(this),amount);
         emit VaultWithdraw(correspondAmount,amount);
     }
 }

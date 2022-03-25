@@ -33,22 +33,29 @@ describe("MAPBridgeV2", () => {
     let amount = '1000000';
     let amountIn = '10000000';
 
-    await this.mintToken.approve(this.bridge.address,'1000000000000000000000000000')
-    console.log("mintToken approve ok")
-    await this.usdt.approve(this.bridge.address,'8000000000000000000000000000')
-    console.log("usdt approve ok")
-
-    await this.mintToken.grantRole("0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6",this.bridge.address)
-    console.log("mintToken grantRole ok")
+    // await this.mintToken.approve(this.bridge.address,'1000000000000000000000000000')
+    // console.log("mintToken approve ok")
+    // await this.usdt.approve(this.bridge.address,'8000000000000000000000000000')
+    // console.log("usdt approve ok")
+    //
+    // await this.mintToken.grantRole("0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6",this.bridge.address)
+    // console.log("mintToken grantRole ok")
 
     let feeCenter = await ethers.getContract("FeeCenter");
-    console.log("feeCenter",feeCenter.address.toString())
-    await this.bridge.setFeeCenter(feeCenter.address);
-    console.log("feeCenter setFeeCenter ok")
-
-    await feeCenter.setDistributeRate(0,"0x0000000000000000000000000000000000000000",100)
-    await feeCenter.setDistributeRate(1,"0x0000000000000000000000000000000000000001",100)
-    console.log("feeCenter setDistributeRate ok")
+    //
+    // console.log(feeCenter.address)
+    //
+    // await feeCenter.setChainTokenGasFee(97,this.wcoin.address,"1000000000000000000","10000000000000000000",1000);
+    // await feeCenter.setChainTokenGasFee(97,this.mintToken.address,"1000000000000000000","10000000000000000000",1000);
+    // await feeCenter.setChainTokenGasFee(97,this.usdt.address,"10000000","100000000",1000);
+    //
+    // console.log("feeCenter",feeCenter.address.toString())
+    // await this.bridge.setFeeCenter(feeCenter.address);
+    // console.log("feeCenter setFeeCenter ok")
+    //
+    // await feeCenter.setDistributeRate(0,"0x0000000000000000000000000000000000000000",100)
+    // await feeCenter.setDistributeRate(1,"0x0000000000000000000000000000000000000001",100)
+    // console.log("feeCenter setDistributeRate ok")
 
     await feeCenter.setTokenVault(this.usdt.address,this.vusdt.address)
     await feeCenter.setTokenVault(this.mintToken.address,this.vmt.address)
