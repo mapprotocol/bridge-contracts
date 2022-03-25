@@ -86,7 +86,12 @@ contract LightNode is UUPSUpgradeable, Initializable {
             uint256 removeList,
             bytes[] memory addedPubKey
         ) = _verifyHeader(rlpHeader);
-        //todo
+        require(ret, "verifyHeader failed");
+        _changeValidators(removeList, addedPubKey);
+    }
+
+    function txVerify(bytes memory rlpHeader) external {
+
     }
 
     /** sstore functions *******************************************************/
@@ -119,6 +124,33 @@ contract LightNode is UUPSUpgradeable, Initializable {
         blsKey[epoch] = keys;
         epochIdx = nextIdx;
         emit validitorsSet(epoch);
+    }
+
+    function _changeValidators(uint256 removedVal, bytes[] memory addVal)
+        private
+    {
+        (uint256[] memory list, uint8 oldVal) = _readRemoveList(removedVal);
+        bytes[] memory newKeys = new bytes[](oldVal + addVal.length);
+        bytes[] memory currentKeys = currentValidators();
+
+        uint256 j = 0;
+        //if value is 1, the related address will be not validaor at nest epoch.
+        for (uint256 i = 0; i < list.length; i++) {
+            if (list[i] == 0) {
+                newKeys[j] = currentKeys[i];
+                j = j + 1;
+            }
+        }
+        for (uint256 i = 0; i < addVal.length; i++) {
+            newKeys[j] = addVal[i];
+            j = j + 1;
+        }
+
+        // nowEpoch = nowEpoch + 1;
+        //require(j<101,"the number of validators is more than 100")
+
+        uint256 newEpoch = currentEpoch() + 1;
+        _setValidators(newKeys, newEpoch);
     }
 
     /** private functions about header manipulation  ************************************/
@@ -450,6 +482,34 @@ contract LightNode is UUPSUpgradeable, Initializable {
         result[32] = bytes1(round);
         result[33] = bytes1(uint8(2));
         return result;
+    }
+
+    //it return binary data and the number of validator in the list.
+    function _readRemoveList(uint256 r)
+        private
+        view
+        returns (uint256[] memory ret, uint8 sum)
+    {
+        //the function transfer uint to binary.
+        sum = 0;
+        ret = new uint256[](keyNum);
+        for (uint256 i = 0; r > 0; i++) {
+            if (r % 2 == 1) {
+                r = (r - 1) / 2;
+                ret[i] = 1;
+            } else {
+                r = r / 2;
+                ret[i] = 0;
+                sum = sum + 1;
+            }
+        }
+        //the current array is inverted.it needs to count down.
+        for (uint256 i = 0; i < ret.length / 2; i++) {
+            uint256 temp = ret[i];
+            ret[i] = ret[ret.length - 1 - i];
+            ret[ret.length - 1 - i] = temp;
+        }
+        return (ret, sum);
     }
 
     /** UUPS *********************************************************/
