@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "./lib/RLPReader.sol";
 import "./lib/RLPEncode.sol";
 
@@ -46,6 +47,29 @@ contract LightNode is UUPSUpgradeable, Initializable {
         uint256 removeList;
         bytes[] addedPubKey;
     }
+
+    struct txParams {
+        address From;
+        address To;
+        uint256 Value;
+    }
+
+    struct txProve {
+        bytes header;
+        txParams Tx;
+        bytes receipt;
+        bytes32[] prove;
+    }
+
+    struct Log {
+        address addr;
+        bytes[] topics;
+        bytes data;
+    }
+
+    // LogSwapOut(bytes32,address,address,address,uint256,uint256,uint256)
+    bytes32 constant EventHash =
+        0xcfdd266a10c21b3f2a2da4a807706d3f3825d37ca51d341eef4dce804212a8a3;
 
     uint256 constant EPOCHCOUNT = 3;
     uint256 private epochIdx;
@@ -90,8 +114,33 @@ contract LightNode is UUPSUpgradeable, Initializable {
         _changeValidators(removeList, addedPubKey);
     }
 
-    function txVerify(bytes memory rlpHeader) external {
+    function txVerify(
+        address router,
+        address,
+        uint256 srcChain,
+        uint256 dstChain,
+        bytes calldata rlpTxProve
+    ) external pure returns (bool success, string memory message) {
+        txProve memory txp = _decodeTxProve(rlpTxProve);
+        blockHeader memory bh = _decodeHeader(txp.header);
+        Log[] memory logs = _decodeTxReceipt(txp.receipt);
 
+        (Log memory lg, bool found) = _queryLog(router, logs);
+        if (!found) {
+            return (false, "LightNode: event log not found");
+        }
+
+        (success, message) = _verifyTxParams(srcChain, dstChain, txp.Tx, lg);
+        if (!success) {
+            return (success, message);
+        }
+
+        bytes32 leaf = keccak256(txp.receipt);
+        bytes32 root = bytes32(bh.receipHash);
+        success = MerkleProof.verify(txp.prove, root, leaf);
+        if (!success) {
+            message = "receipt mismatch";
+        }
     }
 
     /** sstore functions *******************************************************/
@@ -154,6 +203,122 @@ contract LightNode is UUPSUpgradeable, Initializable {
     }
 
     /** private functions about header manipulation  ************************************/
+
+    function _decodeTxProve(bytes memory rlpBytes)
+        private
+        pure
+        returns (txProve memory txp)
+    {
+        RLPReader.RLPItem[] memory ls = rlpBytes.toRlpItem().toList();
+        RLPReader.RLPItem[] memory item1ls = ls[1].toList();
+        RLPReader.RLPItem[] memory item3ls = ls[3].toList();
+
+        uint256 num = item3ls.length;
+        bytes32[] memory receipProve = new bytes32[](num);
+        for (uint256 i = 0; i < num; i++) {
+            receipProve[i] = bytes32(item3ls[i].toBytes());
+        }
+
+        txp = txProve({
+            header: ls[0].toBytes(),
+            Tx: txParams({
+                From: item1ls[0].toAddress(),
+                To: item1ls[1].toAddress(),
+                Value: item1ls[2].toUint()
+            }),
+            receipt: ls[2].toBytes(),
+            prove: receipProve
+        });
+    }
+
+    function _decodeTxReceipt(bytes memory rlpBytes)
+        private
+        pure
+        returns (Log[] memory logs)
+    {
+        RLPReader.RLPItem[] memory ls = rlpBytes.toRlpItem().toList();
+        RLPReader.RLPItem[] memory i5ls = ls[5].toList(); //logs
+
+        uint256 num = i5ls.length;
+        logs = new Log[](num);
+        for (uint256 i = 0; i < num; i++) {
+            RLPReader.RLPItem[] memory l = i5ls[i].toList();
+            logs[i].addr = l[0].toAddress();
+
+            RLPReader.RLPItem[] memory topicls = l[1].toList();
+            uint256 n1 = topicls.length;
+            logs[i].topics = new bytes[](n1);
+            for (uint256 j = 0; j < n1; j++) {
+                logs[i].topics[j] = topicls[j].toBytes();
+            }
+
+            logs[i].data = l[2].toBytes();
+        }
+    }
+
+    function _queryLog(address coinAddr, Log[] memory logs)
+        private
+        pure
+        returns (Log memory lg, bool found)
+    {
+        found = false;
+        uint256 num = logs.length;
+        for (uint256 i = 0; i < num; i++) {
+            if (logs[i].addr == coinAddr) {
+                if (bytes32(logs[i].topics[0]) == EventHash) {
+                    return (logs[i], true);
+                }
+            }
+        }
+    }
+
+    function _verifyTxParams(
+        uint256 srcChain,
+        uint256 dstChain,
+        txParams memory txparams,
+        Log memory log
+    ) private pure returns (bool suc, string memory message) {
+        if (log.topics.length < 4) {
+            return (false, "Topics`s length cannot be less than 4");
+        }
+
+        if (txparams.From != address(bytes20(log.topics[2]))) {
+            return (false, "invalid from");
+        }
+
+        if (txparams.To != address(bytes20(log.topics[3]))) {
+            return (false, "invalid to");
+        }
+
+        if (log.data.length < 128) {
+            return (false, "log.Data length cannot be less than 128");
+        }
+
+        if (txparams.Value != uint256(_bytesSlice32(log.data, 32))) {
+            return (false, "invalid value");
+        }
+
+        if (srcChain != uint256(_bytesSlice32(log.data, 64))) {
+            return (false, "invalid srcChain");
+        }
+
+        if (dstChain != uint256(_bytesSlice32(log.data, 96))) {
+            return (false, "invalid srcChain");
+        }
+        suc = true;
+    }
+
+    function _bytesSlice32(bytes memory data, uint256 offset)
+        private
+        pure
+        returns (bytes32 slice)
+    {
+        bytes memory tmp = new bytes(32);
+        for (uint256 i = 0; i < 32; i++) {
+            tmp[i] = data[offset + 1];
+        }
+        slice = bytes32(tmp);
+    }
 
     function _decodeHeader(bytes memory rlpBytes)
         private
@@ -513,7 +678,7 @@ contract LightNode is UUPSUpgradeable, Initializable {
     }
 
     /** UUPS *********************************************************/
-    function _authorizeUpgrade(address newImplementation) internal override {
+    function _authorizeUpgrade(address) internal view override {
         require(msg.sender == _getAdmin(), "LightNode: only Admin can upgrade");
     }
 }
