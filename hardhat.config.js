@@ -6,6 +6,8 @@ require('hardhat-abi-exporter')
 require('@nomiclabs/hardhat-ethers')
 require('dotenv/config')
 require('@nomiclabs/hardhat-etherscan')
+require('solidity-coverage')
+
 
 const { PRIVATE_KEY, ETH_INFURA_KEY, INFURA_KEY, HECO_SCAN_KEY} = process.env;
 

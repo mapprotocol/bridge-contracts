@@ -116,7 +116,7 @@ contract MAPBridgeV2 is ReentrancyGuard, Role, Initializable,Pausable {
     function depositOut(address token, address from, address to, uint amount) external payable whenNotPaused{
         bytes32 orderId = getOrderID(token, msg.sender, to, amount, 22776);
         require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
-        TransferHelper.safeTransferFrom(token, from, to, amount);
+        TransferHelper.safeTransferFrom(token, from, address(this), amount);
         emit mapDepositOut(token, from, to, orderId, amount);
     }
 
