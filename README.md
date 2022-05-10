@@ -1,4 +1,4 @@
-## Map Bridge Contracts
+## MAP Cross-chain Service (MCS) Contracts
 
 ### 1.  MapCoin Contract
 
