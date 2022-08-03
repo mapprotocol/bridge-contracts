@@ -4,11 +4,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../utils/Role.sol";
 
 contract Mining is Role {
-    using SafeMath for uint;
     using SafeERC20 for IERC20;
 
     // Info of each user.
@@ -75,11 +73,11 @@ contract Mining is Role {
     // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
         if (_to <= bonusEndBlock) {
-            return _to.sub(_from);
+            return _to - _from;
         } else if (_from >= bonusEndBlock) {
             return 0;
         } else {
-            return bonusEndBlock.sub(_from);
+            return bonusEndBlock - _from;
         }
     }
 
@@ -90,10 +88,10 @@ contract Mining is Role {
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 cakeReward = multiplier.mul(rewardPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-            accCakePerShare = accCakePerShare.add(cakeReward.mul(1e12).div(lpSupply));
+            uint256 cakeReward = multiplier * rewardPerBlock * pool.allocPoint / totalAllocPoint;
+            accCakePerShare += cakeReward * 1e12 / lpSupply;
         }
-        return user.amount.mul(accCakePerShare).div(1e12).sub(user.rewardDebt);
+        return user.amount * accCakePerShare / 1e12 - user.rewardDebt;
     }
 
     // Update reward variables of the given pool to be up-to-date.
@@ -107,8 +105,8 @@ contract Mining is Role {
             return;
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 cakeReward = multiplier.mul(rewardPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-        pool.accCakePerShare = pool.accCakePerShare.add(cakeReward.mul(1e12).div(lpSupply));
+        uint256 cakeReward = multiplier * rewardPerBlock * pool.allocPoint / totalAllocPoint;
+        pool.accCakePerShare += cakeReward * 1e12 / lpSupply;
         pool.lastRewardBlock = block.number;
     }
 
@@ -124,16 +122,16 @@ contract Mining is Role {
 
         updatePool();
         if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accCakePerShare).div(1e12).sub(user.rewardDebt);
+            uint256 pending = user.amount * pool.accCakePerShare / 1e12 - user.rewardDebt;
             if(pending > 0) {
                 rewardToken.safeTransfer(address(msg.sender), pending);
             }
         }
         if(_amount > 0) {
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-            user.amount = user.amount.add(_amount);
+            user.amount += _amount;
         }
-        user.rewardDebt = user.amount.mul(pool.accCakePerShare).div(1e12);
+        user.rewardDebt = user.amount * pool.accCakePerShare / 1e12;
 
         emit Deposit(msg.sender, _amount);
     }
@@ -143,15 +141,15 @@ contract Mining is Role {
         UserInfo storage user = userInfo[msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
         updatePool();
-        uint256 pending = user.amount.mul(pool.accCakePerShare).div(1e12).sub(user.rewardDebt);
+        uint256 pending = user.amount * pool.accCakePerShare / 1e12 - user.rewardDebt;
         if(pending > 0) {
             rewardToken.safeTransfer(address(msg.sender), pending);
         }
         if(_amount > 0) {
-            user.amount = user.amount.sub(_amount);
+            user.amount -= _amount;
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
         }
-        user.rewardDebt = user.amount.mul(pool.accCakePerShare).div(1e12);
+        user.rewardDebt = user.amount * pool.accCakePerShare / 1e12;
 
         emit Withdraw(msg.sender, _amount);
     }

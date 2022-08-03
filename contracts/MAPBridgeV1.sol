@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -49,7 +48,6 @@ contract Role is AccessControl{
 
 
 contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
-    using SafeMath for uint;
     uint public nonce;
 
     IERC20 public mapToken;
@@ -124,7 +122,7 @@ contract MAPBridgeV1 is ReentrancyGuard,Role,Initializable{
         uint cFee = chainGasFee[toChainId];
         if (cFee > 0) {
             require(mapToken.balanceOf(msg.sender) >= cFee,"balance too low");
-            chainGasFees = chainGasFees.add(cFee);
+            chainGasFees += cFee;
 //            mapToken.transferFrom(msg.sender, address(this), cFee);
             TransferHelper.safeTransferFrom(address(mapToken),msg.sender,address(this),cFee);
         }

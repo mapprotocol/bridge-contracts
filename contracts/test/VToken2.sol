@@ -3,14 +3,12 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../vault/VERC20.sol";
 import "../interface/IVault.sol";
 import "../utils/Role.sol";
 
 
 contract VToken2 is VERC20, IVault, Role {
-    using SafeMath for uint;
     uint accrualBlockNumber;
     mapping(address => uint) userStakingAmount;
 
@@ -37,13 +35,13 @@ contract VToken2 is VERC20, IVault, Role {
         }
         uint allCorrespond = correspondBalance();
         uint allCToken = totalSupply();
-        return amount.mul(allCToken).div(allCorrespond);
+        return amount * allCToken / allCorrespond;
     }
 
     function getCorrespondQuantity(uint amount) public view returns (uint){
         uint allCorrespond = correspondBalance();
         uint allCToken = totalSupply();
-        return amount.mul(allCorrespond).div(allCToken);
+        return amount * allCorrespond / allCToken;
     }
 
     function staking(uint amount) external override {

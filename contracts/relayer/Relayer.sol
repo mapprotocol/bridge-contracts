@@ -337,7 +337,7 @@ contract Relayer is IRelayer, Initializable, Ownable {
         RelayerInfo storage ri = _relayerInfo[_relayer];
         ri.amount = _amount;
 
-        _relayers.add(_relayer);
+        _relayers += _relayer;
     }
 
     function _removeRelayer(address _relayer)
