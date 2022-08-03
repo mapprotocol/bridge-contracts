@@ -5,7 +5,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -19,7 +18,6 @@ import "./interface/IVault.sol";
 import "./utils/TransferHelper.sol";
 
 contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
-    using SafeMath for uint;
 
     uint public nonce;
 
@@ -107,7 +105,7 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
     }
 
     function getFeeValue(uint amount, uint rate) pure public returns (uint){
-        return amount.mul(rate).div(10000);
+        return amount * rate / 10000;
     }
 
     function collectChainFee(uint amount, address token) public {
@@ -143,12 +141,12 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
         require(IERC20(token).balanceOf(msg.sender) >= amount, "balance too low");
         TransferHelper.safeTransferFrom(token, msg.sender, address(this), amount);
         uint fee = getChainFee(toChainId, token, amount);
-        uint outAmount = amount.sub(fee);
+        uint outAmount = amount - fee;
         if (checkAuthToken(token)) {
             IMAPToken(token).burn(outAmount);
         }
         collectChainFee(fee, token);
-        transferFeeList[token] = transferFeeList[token].add(amount).sub(outAmount);
+        transferFeeList[token] += amount - outAmount;
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         setVaultValue(amount,selfChainId,toChainId,token);
         emit mapTransferOut(token, msg.sender, to, orderId, outAmount, selfChainId, toChainId);
@@ -159,9 +157,9 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
         require(amount > 0, "value too low");
         IWToken(wToken).deposit{value : amount}();
         uint fee = getChainFee(toChainId, address(0), amount);
-        uint outAmount = amount.sub(fee);
+        uint outAmount = amount - fee;
         collectChainFee(fee, address(0));
-        transferFeeList[address(0)] = transferFeeList[address(0)].add(amount).sub(outAmount);
+        transferFeeList[address(0)] += amount - outAmount;
         bytes32 orderId = getOrderID(address(0), msg.sender, to, outAmount, toChainId);
         setVaultValue(amount,selfChainId,toChainId,address(0));
         emit mapTransferOut(address(0), msg.sender, to, orderId, outAmount, selfChainId, toChainId);
@@ -170,7 +168,7 @@ contract MAPBridgeRelayV2 is ReentrancyGuard, Role, Initializable, Pausable {
     function transferIn(address token, address from, address payable to, uint amount, bytes32 orderId, uint fromChain, uint toChain)
     external checkOrder(orderId) nonReentrant onlyManager whenNotPaused{
         uint fee = getChainFee(toChain, token, amount);
-        uint outAmount = amount.sub(fee);
+        uint outAmount = amount - fee;
         if (toChain == selfChainId) {
             if (token == address(0)) {
                 TransferHelper.safeWithdraw(wToken, outAmount);

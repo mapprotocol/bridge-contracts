@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -17,7 +16,6 @@ import "./interface/IFeeCenter.sol";
 import "./utils/TransferHelper.sol";
 
 contract MAPBridgeV2 is ReentrancyGuard, Role, Initializable,Pausable {
-    using SafeMath for uint;
     uint public nonce;
 
     IERC20 public mapToken;

@@ -5,7 +5,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -48,7 +47,6 @@ contract Role is AccessControl{
 }
 
 contract MAPBridgeRelayV1Only is ReentrancyGuard,Role,Initializable{
-    using SafeMath for uint;
 
     uint public nonce;
 
@@ -134,15 +132,15 @@ contract MAPBridgeRelayV1Only is ReentrancyGuard,Role,Initializable{
         if (transferFee == 0) {
             return amount;
         } else {
-            return amount.mul(uint(1000000).sub(transferFee)).div(1000000);
+            return amount * (uint(1000000) - transferFee) / 1000000;
         }
     }
 
     function collectChainFee(uint toChainId,uint native) internal{
         uint cFee = chainGasFee[toChainId];
         if (cFee > 0) {
-            require(msg.value >= cFee.add(native),"balance too low");
-            IWToken(wToken).deposit{value : msg.value.sub(native)}();
+            require(msg.value >= cFee + native,"balance too low");
+            IWToken(wToken).deposit{value : msg.value- native}();
         }
     }
 
@@ -151,7 +149,7 @@ contract MAPBridgeRelayV1Only is ReentrancyGuard,Role,Initializable{
         TransferHelper.safeTransferFrom(token,msg.sender,address(this),amount);
         collectChainFee(toChainId,0);
         uint outAmount = getAmountWithdraw(amount);
-        transferFeeList[token] = transferFeeList[token].add(amount).sub(outAmount);
+        transferFeeList[token] += amount - outAmount;
         IMAPToken(token).burn(outAmount);
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(token, msg.sender, to, orderId, outAmount, selfChainId, toChainId);
@@ -163,7 +161,7 @@ contract MAPBridgeRelayV1Only is ReentrancyGuard,Role,Initializable{
         TransferHelper.safeTransferFrom(token,msg.sender,address(this),amount);
         collectChainFee(toChainId,0);
         uint outAmount = getAmountWithdraw(amount);
-        transferFeeList[token] = transferFeeList[token].add(amount).sub(outAmount);
+        transferFeeList[token] += amount - outAmount;
         bytes32 orderId = getOrderID(token, msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(token, msg.sender, to, orderId, outAmount, selfChainId, toChainId);
     }
@@ -172,7 +170,7 @@ contract MAPBridgeRelayV1Only is ReentrancyGuard,Role,Initializable{
         IWToken(wToken).deposit{value : amount}();
         collectChainFee(toChainId,amount);
         uint outAmount = getAmountWithdraw(amount);
-        transferFeeList[address(0)] = transferFeeList[address(0)].add(amount).sub(outAmount);
+        transferFeeList[address(0)] += amount - outAmount;
         bytes32 orderId = getOrderID(address(0), msg.sender, to, outAmount, toChainId);
         emit mapTransferOut(address(0), msg.sender, to, orderId, outAmount, selfChainId, toChainId);
     }
